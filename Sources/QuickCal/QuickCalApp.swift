@@ -34,7 +34,7 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
             weight: .medium
         )
         let image = NSImage(
-            systemSymbolName: "calendar",
+            systemSymbolName: "calendar.badge.clock",
             accessibilityDescription: "QuickCal"
         )?.withSymbolConfiguration(symbolConfiguration)
         image?.isTemplate = true
