@@ -71,7 +71,7 @@ Contents/Resources/QuickCal_QuickCalKit.bundle/ru.lproj/Localizable.strings
 Installed executable и `dist` имеют одинаковый SHA-256:
 
 ```text
-b2ca7270cc1fa54514a3da00fccb3f9bf95a76f79d1f991686183820d0bc26aa
+4af88733315fa45355bafb5f6ffac4878088295cdbe8d0d1227de8929059a41e
 ```
 
 `lsof` подтвердил, что финальный процесс загрузил:
@@ -99,7 +99,7 @@ System Events, native AX и `screencapture` только заданной обл
 
 | Критерий | Фактический результат |
 |---|---|
-| Menu bar | `AXMenuBarItem`, `AXMenuExtra`, размер 34×24; custom calendar glyph визуально крупнее базовой версии |
+| Menu bar | `NSStatusItem`, размер 40×24 pt; неактивный glyph 36×33 px / 16,5 pt вместо прежних 26×24 px / 12 pt |
 | Popover с номерами недель | 342×460 для июля 2026 |
 | Popover без номеров недель | 310×460; labels недель отсутствуют |
 | Системный язык | `AppleLanguages = [en-US, ru-RU]`; обычный запуск показывает английский UI |
@@ -126,12 +126,18 @@ System Events, native AX и `screencapture` только заданной обл
 
 ## Visual evidence
 
-- [Увеличенная menu bar icon](evidence/quickcal-menu-icon.png)
+- [Menu bar icon через NSStatusItem](evidence/quickcal-menu-icon-nsstatusitem.png)
 - [Календарь 342 pt: red weekends, green pill, blue today](evidence/quickcal-calendar-enhancements.png)
 - [Календарь 310 pt без недель и hover строки Quit](evidence/quickcal-calendar-enhancements-no-weeks-hover.png)
 
 Снимки содержат только status item или окно QuickCal, без unrelated desktop
 content.
+
+Runtime-тест `Tests/RuntimeTests/menu-bar-icon-size.sh` измеряет glyph на
+системной подсветке status item: 36×34 px / 17 pt, то есть `1.000` от
+17-point reference, измеренного у ChatGPT на пользовательском снимке.
+Предыдущая `MenuBarExtra`-версия ожидаемо не проходит этот тест:
+12 pt, ratio `0.706`.
 
 ## Финальное состояние
 
