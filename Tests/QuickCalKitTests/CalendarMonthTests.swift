@@ -1,8 +1,9 @@
 import Foundation
-import XCTest
-@testable import QuickCalKit
+import Testing
+import QuickCalKit
 
-final class CalendarMonthTests: XCTestCase {
+@Suite
+struct CalendarMonthTests {
     private func calendar(firstWeekday: Int = 2) -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = Locale(identifier: "en_US_POSIX")
@@ -26,28 +27,24 @@ final class CalendarMonthTests: XCTestCase {
         ))!
     }
 
-    func testJuly2026UsesFiveCompleteMondayFirstWeeks() throws {
+    @Test
+    func july2026UsesFiveCompleteMondayFirstWeeks() throws {
         let calendar = calendar()
-        let month = try XCTUnwrap(CalendarMonth(
+        let month = try #require(CalendarMonth(
             containing: date(2026, 7, 15, calendar: calendar),
             calendar: calendar
         ))
 
-        XCTAssertEqual(month.weeks.count, 5)
-        XCTAssertEqual(
-            month.weeks.first?.startDate,
-            date(2026, 6, 29, calendar: calendar)
-        )
-        XCTAssertEqual(
-            month.weeks.last?.days.last?.date,
-            date(2026, 8, 2, calendar: calendar)
-        )
-        XCTAssertEqual(month.weeks.flatMap(\.days).count, 35)
+        #expect(month.weeks.count == 5)
+        #expect(month.weeks.first?.startDate == date(2026, 6, 29, calendar: calendar))
+        #expect(month.weeks.last?.days.last?.date == date(2026, 8, 2, calendar: calendar))
+        #expect(month.weeks.flatMap(\.days).count == 35)
     }
 
-    func testLeapFebruaryContainsFebruary29() throws {
+    @Test
+    func leapFebruaryContainsFebruary29() throws {
         let calendar = calendar()
-        let month = try XCTUnwrap(CalendarMonth(
+        let month = try #require(CalendarMonth(
             containing: date(2028, 2, 12, calendar: calendar),
             calendar: calendar
         ))
@@ -57,63 +54,67 @@ final class CalendarMonthTests: XCTestCase {
             .filter(\.isInDisplayedMonth)
             .map(\.number)
 
-        XCTAssertEqual(displayedNumbers, Array(1...29))
+        #expect(displayedNumbers == Array(1...29))
     }
 
-    func testWeekdaySymbolsFollowFirstWeekday() throws {
-        let mondayMonth = try XCTUnwrap(CalendarMonth(
+    @Test
+    func weekdaySymbolsFollowFirstWeekday() throws {
+        let mondayMonth = try #require(CalendarMonth(
             containing: Date(timeIntervalSince1970: 0),
             calendar: calendar(firstWeekday: 2)
         ))
-        let sundayMonth = try XCTUnwrap(CalendarMonth(
+        let sundayMonth = try #require(CalendarMonth(
             containing: Date(timeIntervalSince1970: 0),
             calendar: calendar(firstWeekday: 1)
         ))
 
-        XCTAssertEqual(mondayMonth.weekdaySymbols.first, "Mon")
-        XCTAssertEqual(sundayMonth.weekdaySymbols.first, "Sun")
+        #expect(mondayMonth.weekdaySymbols.first == "Mon")
+        #expect(sundayMonth.weekdaySymbols.first == "Sun")
     }
 
-    func testShiftAcrossYearBoundary() throws {
+    @Test
+    func shiftAcrossYearBoundary() throws {
         let calendar = calendar()
-        let december = try XCTUnwrap(CalendarMonth(
+        let december = try #require(CalendarMonth(
             containing: date(2026, 12, 20, calendar: calendar),
             calendar: calendar
         ))
-        let january = try XCTUnwrap(december.shifted(by: 1))
+        let january = try #require(december.shifted(by: 1))
         let components = calendar.dateComponents([.year, .month], from: january.start)
 
-        XCTAssertEqual(components.year, 2027)
-        XCTAssertEqual(components.month, 1)
+        #expect(components.year == 2027)
+        #expect(components.month == 1)
     }
 
-    func testTodayComparisonUsesCalendarDay() throws {
+    @Test
+    func todayComparisonUsesCalendarDay() throws {
         let calendar = calendar()
-        let month = try XCTUnwrap(CalendarMonth(
+        let month = try #require(CalendarMonth(
             containing: date(2026, 7, 15, calendar: calendar),
             calendar: calendar
         ))
-        let day = try XCTUnwrap(
+        let day = try #require(
             month.weeks.flatMap(\.days).first { $0.number == 29 && $0.isInDisplayedMonth }
         )
 
-        XCTAssertTrue(month.isToday(
+        #expect(month.isToday(
             day,
             relativeTo: date(2026, 7, 29, calendar: calendar)
         ))
-        XCTAssertFalse(month.isToday(
+        #expect(!month.isToday(
             day,
             relativeTo: date(2026, 7, 30, calendar: calendar)
         ))
     }
 
-    func testWeekNumbersBelongToEachRenderedRow() throws {
+    @Test
+    func weekNumbersBelongToEachRenderedRow() throws {
         let calendar = calendar()
-        let month = try XCTUnwrap(CalendarMonth(
+        let month = try #require(CalendarMonth(
             containing: date(2026, 7, 15, calendar: calendar),
             calendar: calendar
         ))
 
-        XCTAssertEqual(month.weeks.map(\.weekOfYear), [27, 28, 29, 30, 31])
+        #expect(month.weeks.map(\.weekOfYear) == [27, 28, 29, 30, 31])
     }
 }
