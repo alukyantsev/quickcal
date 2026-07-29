@@ -8,8 +8,9 @@ struct QuickCalApp: App {
         } label: {
             Image(systemName: "calendar")
                 .symbolRenderingMode(.monochrome)
-                .font(.system(size: 18, weight: .semibold))
-                .frame(width: 22, height: 22)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 26, height: 24)
                 .accessibilityLabel("QuickCal")
         }
         .menuBarExtraStyle(.window)
