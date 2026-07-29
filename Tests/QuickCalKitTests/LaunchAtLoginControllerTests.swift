@@ -72,7 +72,10 @@ struct LaunchAtLoginControllerTests {
         await MainActor.run {
             let service = FakeService()
             service.status = .requiresApproval
-            let controller = LaunchAtLoginController(service: service)
+            let controller = LaunchAtLoginController(
+                service: service,
+                locale: Locale(identifier: "ru_RU")
+            )
 
             #expect(!controller.isEnabled)
             #expect(
@@ -87,12 +90,38 @@ struct LaunchAtLoginControllerTests {
         await MainActor.run {
             let service = FakeService()
             service.registerError = TestError()
-            let controller = LaunchAtLoginController(service: service)
+            let controller = LaunchAtLoginController(
+                service: service,
+                locale: Locale(identifier: "ru_RU")
+            )
 
             controller.setEnabled(true)
 
             #expect(!controller.isEnabled)
             #expect(controller.message == "Не удалось изменить автозапуск: access denied")
+        }
+    }
+
+    @Test
+    func launchAtLoginMessagesFollowInjectedEnglishLocale() async {
+        await MainActor.run {
+            let service = FakeService()
+            service.status = .requiresApproval
+            let controller = LaunchAtLoginController(
+                service: service,
+                locale: Locale(identifier: "en_GB")
+            )
+
+            #expect(
+                controller.message
+                    == "Allow QuickCal in System Settings → General → Login Items."
+            )
+
+            service.status = .notRegistered
+            service.registerError = TestError()
+            controller.setEnabled(true)
+
+            #expect(controller.message == "Could not change launch at login: access denied")
         }
     }
 }

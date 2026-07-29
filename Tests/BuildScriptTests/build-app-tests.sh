@@ -8,6 +8,7 @@ PROJECT_DIR="${TEST_ROOT}/QuickCal"
 MOCK_BIN="${TEST_ROOT}/mock-bin"
 SDK_ROOT="${TEST_ROOT}/MacOSX.sdk"
 BIN_DIR="${TEST_ROOT}/release-bin"
+RESOURCE_BUNDLE="${BIN_DIR}/QuickCal_QuickCalKit.bundle"
 LOG_FILE="${TEST_ROOT}/commands.log"
 
 mkdir -p \
@@ -15,7 +16,9 @@ mkdir -p \
     "${PROJECT_DIR}/Support" \
     "${MOCK_BIN}" \
     "${SDK_ROOT}" \
-    "${BIN_DIR}"
+    "${BIN_DIR}" \
+    "${RESOURCE_BUNDLE}/en.lproj" \
+    "${RESOURCE_BUNDLE}/ru.lproj"
 
 SDK_ROOT="$(cd "${SDK_ROOT}" && pwd -P)"
 
@@ -24,6 +27,10 @@ cp "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/Scripts/build-app.sh" \
 cp "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/Support/Info.plist" \
     "${PROJECT_DIR}/Support/Info.plist"
 printf 'fixture executable\n' > "${BIN_DIR}/QuickCal"
+printf '"app.quit" = "Quit QuickCal";\n' \
+    > "${RESOURCE_BUNDLE}/en.lproj/Localizable.strings"
+printf '"app.quit" = "Выйти из QuickCal";\n' \
+    > "${RESOURCE_BUNDLE}/ru.lproj/Localizable.strings"
 chmod 755 "${BIN_DIR}/QuickCal"
 
 write_mock() {
@@ -90,3 +97,68 @@ if [[ "${BUILD_COUNT}" != "1" ]]; then
 fi
 
 echo "ok - explicit SDKROOT performs one fresh arm64 release build"
+
+INSTALLED_RESOURCE_BUNDLE="$(
+    printf '%s\n' \
+        "${PROJECT_DIR}/dist/QuickCal.app/Contents/Resources/QuickCal_QuickCalKit.bundle"
+)"
+
+if ! cmp \
+    "${RESOURCE_BUNDLE}/en.lproj/Localizable.strings" \
+    "${INSTALLED_RESOURCE_BUNDLE}/en.lproj/Localizable.strings" >/dev/null
+then
+    echo "not ok - English localization must be copied into the app bundle" >&2
+    exit 1
+fi
+
+if ! cmp \
+    "${RESOURCE_BUNDLE}/ru.lproj/Localizable.strings" \
+    "${INSTALLED_RESOURCE_BUNDLE}/ru.lproj/Localizable.strings" >/dev/null
+then
+    echo "not ok - Russian localization must be copied into the app bundle" >&2
+    exit 1
+fi
+
+DEVELOPMENT_REGION="$(
+    /usr/bin/plutil -extract CFBundleDevelopmentRegion raw \
+        "${PROJECT_DIR}/dist/QuickCal.app/Contents/Info.plist"
+)"
+if [[ "${DEVELOPMENT_REGION}" != "en" ]]; then
+    echo "not ok - English must be the app localization fallback" >&2
+    exit 1
+fi
+
+FIRST_LOCALIZATION="$(
+    /usr/bin/plutil -extract CFBundleLocalizations.0 raw \
+        "${PROJECT_DIR}/dist/QuickCal.app/Contents/Info.plist"
+)"
+SECOND_LOCALIZATION="$(
+    /usr/bin/plutil -extract CFBundleLocalizations.1 raw \
+        "${PROJECT_DIR}/dist/QuickCal.app/Contents/Info.plist"
+)"
+if [[ "${FIRST_LOCALIZATION}" != "en" || "${SECOND_LOCALIZATION}" != "ru" ]]; then
+    echo "not ok - the app must advertise English and Russian localizations" >&2
+    exit 1
+fi
+
+mv "${RESOURCE_BUNDLE}" "${TEST_ROOT}/missing-resource-bundle"
+MISSING_RESOURCE_ERROR="${TEST_ROOT}/missing-resource-error.log"
+
+if PATH="${MOCK_BIN}:${PATH}" \
+    SDKROOT="${SDK_ROOT}" \
+    QUICKCAL_TEST_LOG="${LOG_FILE}" \
+    QUICKCAL_TEST_BIN_DIR="${BIN_DIR}" \
+        "${PROJECT_DIR}/Scripts/build-app.sh" \
+        >"${TEST_ROOT}/missing-resource-output.log" \
+        2>"${MISSING_RESOURCE_ERROR}"
+then
+    echo "not ok - a missing localization bundle must fail the build" >&2
+    exit 1
+fi
+
+if [[ "$(<"${MISSING_RESOURCE_ERROR}")" != *"missing localization bundle"* ]]; then
+    echo "not ok - missing localization failure must be actionable" >&2
+    exit 1
+fi
+
+echo "ok - localization resources are packaged with fail-fast validation"

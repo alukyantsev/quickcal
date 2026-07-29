@@ -6,6 +6,8 @@ PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 APP_DIR="${PROJECT_DIR}/dist/QuickCal.app"
 CONTENTS_DIR="${APP_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
+RESOURCES_DIR="${CONTENTS_DIR}/Resources"
+RESOURCE_BUNDLE_NAME="QuickCal_QuickCalKit.bundle"
 
 build_release() {
     swift build --package-path "${PROJECT_DIR}" -c release --arch arm64
@@ -65,11 +67,18 @@ fi
 
 export SDKROOT="${SELECTED_SDK_ROOT}"
 BIN_DIR="$(swift build --package-path "${PROJECT_DIR}" -c release --arch arm64 --show-bin-path)"
+RESOURCE_BUNDLE_SOURCE="${BIN_DIR}/${RESOURCE_BUNDLE_NAME}"
+
+if [[ ! -d "${RESOURCE_BUNDLE_SOURCE}" ]]; then
+    echo "error: missing localization bundle: ${RESOURCE_BUNDLE_SOURCE}" >&2
+    exit 1
+fi
 
 rm -rf "${APP_DIR}"
-mkdir -p "${MACOS_DIR}"
+mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 cp "${BIN_DIR}/QuickCal" "${MACOS_DIR}/QuickCal"
 cp "${PROJECT_DIR}/Support/Info.plist" "${CONTENTS_DIR}/Info.plist"
+cp -R "${RESOURCE_BUNDLE_SOURCE}" "${RESOURCES_DIR}/${RESOURCE_BUNDLE_NAME}"
 chmod 755 "${MACOS_DIR}/QuickCal"
 
 codesign --force --deep --sign - "${APP_DIR}"

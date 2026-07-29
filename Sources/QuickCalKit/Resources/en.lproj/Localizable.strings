@@ -1,0 +1,15 @@
+"calendar.return_to_today" = "Return to today";
+"calendar.previous_month" = "Previous month";
+"calendar.next_month" = "Next month";
+"calendar.accessibility.today" = "Today";
+"calendar.accessibility.selected" = "Selected";
+"calendar.accessibility.day_off" = "Day off";
+"calendar.week_number_format" = "Week %d";
+"settings.show_week_numbers" = "Show week numbers";
+"settings.launch_at_login" = "Launch at login";
+"app.quit" = "Quit QuickCal";
+"launch.requires_approval" = "Allow QuickCal in System Settings → General → Login Items.";
+"launch.unknown_status" = "Could not determine launch-at-login status.";
+"launch.change_failed_format" = "Could not change launch at login: %@";
+"date.header_format" = "%1$@, %2$@";
+"date.month_title_format" = "%1$@ %2$@";

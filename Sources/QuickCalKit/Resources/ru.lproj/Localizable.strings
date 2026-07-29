@@ -1,0 +1,15 @@
+"calendar.return_to_today" = "Вернуться к сегодняшнему дню";
+"calendar.previous_month" = "Предыдущий месяц";
+"calendar.next_month" = "Следующий месяц";
+"calendar.accessibility.today" = "Сегодня";
+"calendar.accessibility.selected" = "Выбрано";
+"calendar.accessibility.day_off" = "Выходной";
+"calendar.week_number_format" = "Неделя %d";
+"settings.show_week_numbers" = "Показывать номера недель";
+"settings.launch_at_login" = "Запускать при входе";
+"app.quit" = "Выйти из QuickCal";
+"launch.requires_approval" = "Разрешите QuickCal в Системных настройках → Основные → Объекты входа.";
+"launch.unknown_status" = "Не удалось определить состояние автозапуска.";
+"launch.change_failed_format" = "Не удалось изменить автозапуск: %@";
+"date.header_format" = "%1$@ %2$@";
+"date.month_title_format" = "%1$@ %2$@";

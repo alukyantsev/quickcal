@@ -42,13 +42,17 @@ let testingLinkerSettings: [LinkerSetting] = {
 
 let package = Package(
     name: "QuickCal",
+    defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "QuickCalKit", targets: ["QuickCalKit"]),
         .executable(name: "QuickCal", targets: ["QuickCal"]),
     ],
     targets: [
-        .target(name: "QuickCalKit"),
+        .target(
+            name: "QuickCalKit",
+            resources: [.process("Resources")]
+        ),
         .executableTarget(name: "QuickCal", dependencies: ["QuickCalKit"]),
         .testTarget(
             name: "QuickCalKitTests",
