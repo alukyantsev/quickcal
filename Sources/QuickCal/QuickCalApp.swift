@@ -14,6 +14,16 @@ struct QuickCalApp: App {
 }
 
 @MainActor
+enum PopoverAppearanceSynchronizer {
+    static func apply(
+        _ appearance: NSAppearance,
+        to popover: NSPopover
+    ) {
+        popover.appearance = appearance
+    }
+}
+
+@MainActor
 final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
@@ -66,12 +76,18 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(button)
         } else {
+            let application = NSApplication.shared
+            PopoverAppearanceSynchronizer.apply(
+                application.effectiveAppearance,
+                to: popover
+            )
             popover.show(
                 relativeTo: button.bounds,
                 of: button,
                 preferredEdge: .minY
             )
-            NSApplication.shared.activate(ignoringOtherApps: true)
+            application.activate()
+            popover.contentViewController?.view.window?.makeKey()
         }
     }
 }
