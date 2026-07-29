@@ -23,7 +23,16 @@ probe_sdk() {
 
 SELECTED_SDK_ROOT="${SDKROOT:-}"
 
-if [[ -z "${SELECTED_SDK_ROOT}" ]]; then
+if [[ -n "${SELECTED_SDK_ROOT}" ]]; then
+    if [[ ! -d "${SELECTED_SDK_ROOT}" ]]; then
+        echo "error: SDKROOT is not an existing directory: ${SELECTED_SDK_ROOT}" >&2
+        exit 1
+    fi
+
+    SELECTED_SDK_ROOT="$(cd "${SELECTED_SDK_ROOT}" && pwd -P)"
+    export SDKROOT="${SELECTED_SDK_ROOT}"
+    build_release
+else
     DEFAULT_SDK_ROOT="$(cd "$(xcrun --sdk macosx --show-sdk-path)" && pwd -P)"
 
     if build_release; then

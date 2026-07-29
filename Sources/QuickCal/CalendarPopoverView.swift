@@ -81,6 +81,7 @@ struct CalendarPopoverView: View {
                 Image(systemName: "chevron.left")
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Предыдущий месяц")
             .help("Предыдущий месяц")
 
             Spacer()
@@ -96,6 +97,7 @@ struct CalendarPopoverView: View {
                 Image(systemName: "chevron.right")
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Следующий месяц")
             .help("Следующий месяц")
         }
     }

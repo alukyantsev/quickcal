@@ -29,11 +29,13 @@ struct CalendarGridView: View {
                         dayCell(day)
                     }
                     if showWeekNumbers {
-                        Text(verbatim: "\(week.weekOfYear)")
+                        Text(week.weekOfYear, format: .number)
                             .font(.callout.weight(.semibold))
                             .foregroundStyle(.tertiary)
                             .frame(width: 28)
-                            .accessibilityLabel("Неделя \(week.weekOfYear)")
+                            .accessibilityLabel(
+                                Text("Неделя \(week.weekOfYear, format: .number)")
+                            )
                     }
                 }
             }
@@ -48,7 +50,7 @@ struct CalendarGridView: View {
                     .fill(Color.accentColor)
                     .frame(width: 31, height: 31)
             }
-            Text(verbatim: "\(day.number)")
+            Text(day.number, format: .number)
                 .font(.system(size: 17))
                 .fontWeight(month.calendar.isDateInWeekend(day.date) ? .semibold : .regular)
                 .foregroundStyle(
