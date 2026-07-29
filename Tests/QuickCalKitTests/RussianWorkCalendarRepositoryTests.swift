@@ -211,6 +211,33 @@ struct RussianWorkCalendarRepositoryTests {
     }
 
     @Test
+    func staleCacheThrottlesRepeatedRefreshFailuresForOneDay() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let now = date(2026, 7, 29)
+        let cache = RussianWorkCalendarCache(directory: directory)
+        try await cache.save(
+            rawData: rawData(firstCode: Character("1").asciiValue!),
+            for: 2026,
+            fetchedAt: now.addingTimeInterval(-90_000)
+        )
+        let client = SequencedClient([.failure, .failure])
+        let repository = RussianWorkCalendarRepository(
+            client: client,
+            cache: cache,
+            now: { now },
+            timeZone: TimeZone(secondsFromGMT: 0)!
+        )
+
+        let first = try #require(await repository.calendar(for: 2026))
+        let second = try #require(await repository.calendar(for: 2026))
+
+        #expect(first.code(month: 1, day: 1) == .dayOff)
+        #expect(second.code(month: 1, day: 1) == .dayOff)
+        #expect(await client.requestedYears == [2026])
+    }
+
+    @Test
     func completedYearUsesValidStaleCacheWithoutRefresh() async throws {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

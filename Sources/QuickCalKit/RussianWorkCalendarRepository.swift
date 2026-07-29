@@ -16,6 +16,7 @@ public actor RussianWorkCalendarRepository {
 
     private var memory: [Int: StoredCalendar] = [:]
     private var inFlight: [Int: Task<StoredCalendar?, Never>] = [:]
+    private var lastRefreshAttempt: [Int: Date] = [:]
 
     public init(
         client: any IsDayOffLoading,
@@ -38,17 +39,32 @@ public actor RussianWorkCalendarRepository {
             return await task.value?.calendar
         }
 
+        let requestDate = now()
+        if let cached = memory[year],
+           Self.needsRefresh(
+               year: year,
+               fetchedAt: cached.fetchedAt,
+               now: requestDate,
+               timeZone: timeZone
+           ),
+           let previousAttempt = lastRefreshAttempt[year],
+           requestDate.timeIntervalSince(previousAttempt) < Self.refreshInterval
+        {
+            return cached.calendar
+        }
+
         let task = Task<StoredCalendar?, Never> {
             await Self.resolve(
                 year: year,
                 memoryEntry: memory[year],
                 client: client,
                 cache: cache,
-                now: now(),
+                now: requestDate,
                 timeZone: timeZone
             )
         }
         inFlight[year] = task
+        lastRefreshAttempt[year] = requestDate
 
         let result = await task.value
         inFlight[year] = nil
