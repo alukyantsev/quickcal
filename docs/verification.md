@@ -1,5 +1,10 @@
 # Проверка QuickCal — 2026-07-29
 
+> Актуальная приёмка версии с производственным календарём, локализацией,
+> hover-состояниями и persistent-выбором дат:
+> [verification-calendar-enhancements.md](verification-calendar-enhancements.md).
+> Ниже сохранён отчёт предыдущей базовой версии.
+
 Проверенный commit приложения: `377be73 fix: expose month navigation labels`.
 
 Установленный артефакт: `/Applications/QuickCal.app`.
