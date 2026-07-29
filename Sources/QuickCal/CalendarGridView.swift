@@ -5,6 +5,10 @@ struct CalendarGridView: View {
     let month: CalendarMonth
     let showWeekNumbers: Bool
     let today: Date
+    let selectedDates: Set<CalendarDate>
+    let workdayStatus: (Date) -> WorkdayStatus
+    let localization: QuickCalLocalization
+    let onToggleDate: (CalendarDate) -> Void
 
     private let cellWidth: CGFloat = 34
     private let rowSpacing: CGFloat = 3
@@ -24,9 +28,43 @@ struct CalendarGridView: View {
             }
 
             ForEach(month.weeks) { week in
+                let calendarDates = week.days.compactMap {
+                    CalendarDate(
+                        date: $0.date,
+                        timeZone: month.calendar.timeZone
+                    )
+                }
+
                 HStack(spacing: 4) {
-                    ForEach(week.days) { day in
-                        dayCell(day)
+                    ForEach(
+                        Array(week.days.enumerated()),
+                        id: \.element.id
+                    ) { index, day in
+                        let calendarDate = CalendarDate(
+                            date: day.date,
+                            timeZone: month.calendar.timeZone
+                        )
+                        let segment = calendarDates.count == week.days.count
+                            ? SelectionSegment.forDay(
+                                at: index,
+                                in: calendarDates,
+                                selectedDates: selectedDates
+                            )
+                            : .none
+
+                        CalendarDayCell(
+                            day: day,
+                            calendarDate: calendarDate,
+                            selectionSegment: segment,
+                            isToday: month.isToday(
+                                day,
+                                relativeTo: today
+                            ),
+                            workdayStatus: workdayStatus(day.date),
+                            calendar: month.calendar,
+                            localization: localization,
+                            onToggle: onToggleDate
+                        )
                     }
                     if showWeekNumbers {
                         Text(week.weekOfYear, format: .number)
@@ -34,35 +72,15 @@ struct CalendarGridView: View {
                             .foregroundStyle(.tertiary)
                             .frame(width: 28)
                             .accessibilityLabel(
-                                Text("Неделя \(week.weekOfYear, format: .number)")
+                                Text(verbatim: localization.format(
+                                    .weekNumberFormat,
+                                    week.weekOfYear
+                                ))
                             )
                     }
                 }
             }
         }
-    }
-
-    private func dayCell(_ day: CalendarDay) -> some View {
-        let isToday = month.isToday(day, relativeTo: today)
-        return ZStack {
-            if isToday {
-                Circle()
-                    .fill(Color.accentColor)
-                    .frame(width: 31, height: 31)
-            }
-            Text(day.number, format: .number)
-                .font(.system(size: 17))
-                .fontWeight(month.calendar.isDateInWeekend(day.date) ? .semibold : .regular)
-                .foregroundStyle(
-                    isToday
-                        ? Color.white
-                        : day.isInDisplayedMonth
-                            ? Color.primary
-                            : Color.secondary.opacity(0.65)
-                )
-        }
-        .frame(width: cellWidth, height: cellWidth)
-        .accessibilityLabel(day.date.formatted(date: .complete, time: .omitted))
-        .accessibilityValue(isToday ? "Сегодня" : "")
+        .environment(\.locale, localization.locale)
     }
 }

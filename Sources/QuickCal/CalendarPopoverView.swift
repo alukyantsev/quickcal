@@ -6,14 +6,24 @@ struct CalendarPopoverView: View {
     @AppStorage("showWeekNumbers") private var showWeekNumbers = true
     @State private var displayedMonth = Date()
     @StateObject private var launchAtLogin = LaunchAtLoginController()
+    @StateObject private var selectedDates = SelectedDatesStore()
+    @StateObject private var workCalendar = WorkCalendarController()
 
-    private let calendar = Calendar.autoupdatingCurrent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let localization = QuickCalLocalization.current
+
+    private var calendar: Calendar {
+        localization.calendar()
+    }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             VStack(alignment: .leading, spacing: 12) {
-                Text(context.date.formatted(
-                    .dateTime.weekday(.wide).day().month(.wide).year()
+                Text(verbatim: DatePresentation.fullDate(
+                    context.date,
+                    calendar: calendar,
+                    localization: localization
                 ))
                 .font(.headline)
                 .foregroundStyle(.secondary)
@@ -29,44 +39,66 @@ struct CalendarPopoverView: View {
                     CalendarGridView(
                         month: month,
                         showWeekNumbers: showWeekNumbers,
-                        today: context.date
+                        today: context.date,
+                        selectedDates: selectedDates.selectedDates,
+                        workdayStatus: { workCalendar.status(for: $0) },
+                        localization: localization,
+                        onToggleDate: { selectedDates.toggle($0) }
                     )
-                } else {
-                    Button("Вернуться к текущему месяцу") {
-                        displayedMonth = Date()
+                    .task(id: month.start) {
+                        await workCalendar.load(month: month)
                     }
+                } else {
+                    HoverActionButton(
+                        title: localization.string(.returnToToday),
+                        action: showToday
+                    )
                 }
 
                 Divider()
 
-                Toggle("Показывать номера недель", isOn: $showWeekNumbers)
+                HoverSurface {
+                    Toggle(isOn: $showWeekNumbers) {
+                        Text(verbatim: localization.string(.showWeekNumbers))
+                    }
                     .toggleStyle(.checkbox)
+                }
 
-                Toggle(
-                    "Запускать при входе",
-                    isOn: Binding(
-                        get: { launchAtLogin.isEnabled },
-                        set: { launchAtLogin.setEnabled($0) }
-                    )
-                )
-                .toggleStyle(.checkbox)
+                HoverSurface {
+                    Toggle(
+                        isOn: Binding(
+                            get: { launchAtLogin.isEnabled },
+                            set: { launchAtLogin.setEnabled($0) }
+                        )
+                    ) {
+                        Text(verbatim: localization.string(.launchAtLogin))
+                    }
+                    .toggleStyle(.checkbox)
+                }
 
                 if let message = launchAtLogin.message {
-                    Text(message)
+                    Text(verbatim: message)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 6)
                 }
 
                 Divider()
 
-                Button("Выйти из QuickCal") {
+                HoverActionButton(
+                    title: localization.string(.quitQuickCal)
+                ) {
                     NSApplication.shared.terminate(nil)
                 }
-                .buttonStyle(.plain)
             }
             .padding(16)
-            .frame(width: 342)
+            .frame(width: showWeekNumbers ? 342 : 310)
+            .animation(
+                .easeInOut(duration: reduceMotion ? 0 : 0.16),
+                value: showWeekNumbers
+            )
+            .environment(\.locale, localization.locale)
         }
         .onAppear {
             launchAtLogin.refresh()
@@ -74,40 +106,62 @@ struct CalendarPopoverView: View {
     }
 
     private var monthNavigation: some View {
-        HStack {
-            Button {
-                moveMonth(by: -1)
-            } label: {
-                Label("Предыдущий месяц", systemImage: "chevron.left")
-                    .labelStyle(.iconOnly)
+        ZStack {
+            Text(verbatim: DatePresentation.monthTitle(
+                displayedMonth,
+                calendar: calendar,
+                localization: localization
+            ))
+            .font(.title2.weight(.semibold))
+
+            HStack(spacing: 2) {
+                HoverIconButton(
+                    title: localization.string(.previousMonth),
+                    systemImage: "chevron.left"
+                ) {
+                    moveMonth(by: -1)
+                }
+
+                Spacer()
+
+                HoverIconButton(
+                    title: localization.string(.returnToToday),
+                    systemImage: "calendar.badge.clock",
+                    symbolSize: 15,
+                    controlSize: 30,
+                    action: showToday
+                )
+
+                HoverIconButton(
+                    title: localization.string(.nextMonth),
+                    systemImage: "chevron.right"
+                ) {
+                    moveMonth(by: 1)
+                }
             }
-            .buttonStyle(.plain)
-            .help("Предыдущий месяц")
+        }
+        .frame(height: 32)
+    }
 
-            Spacer()
-
-            Text(displayedMonth.formatted(.dateTime.month(.wide).year()))
-                .font(.title2.weight(.semibold))
-
-            Spacer()
-
-            Button {
-                moveMonth(by: 1)
-            } label: {
-                Label("Следующий месяц", systemImage: "chevron.right")
-                    .labelStyle(.iconOnly)
-            }
-            .buttonStyle(.plain)
-            .help("Следующий месяц")
+    private func showToday() {
+        let now = Date()
+        if let interval = calendar.dateInterval(of: .month, for: now) {
+            displayedMonth = interval.start
+        } else {
+            displayedMonth = now
         }
     }
 
     private func moveMonth(by offset: Int) {
         guard
-            let next = calendar.date(byAdding: .month, value: offset, to: displayedMonth),
+            let next = calendar.date(
+                byAdding: .month,
+                value: offset,
+                to: displayedMonth
+            ),
             let interval = calendar.dateInterval(of: .month, for: next)
         else {
-            displayedMonth = Date()
+            showToday()
             return
         }
         displayedMonth = interval.start
