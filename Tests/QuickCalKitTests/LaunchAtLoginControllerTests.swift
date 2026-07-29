@@ -56,6 +56,18 @@ struct LaunchAtLoginControllerTests {
     }
 
     @Test
+    func notFoundBehavesLikeDisabledWithoutMessage() async {
+        await MainActor.run {
+            let service = FakeService()
+            service.status = .notFound
+            let controller = LaunchAtLoginController(service: service)
+
+            #expect(!controller.isEnabled)
+            #expect(controller.message == nil)
+        }
+    }
+
+    @Test
     func requiresApprovalShowsActionableMessage() async {
         await MainActor.run {
             let service = FakeService()

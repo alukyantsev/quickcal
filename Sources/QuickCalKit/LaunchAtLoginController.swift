@@ -34,7 +34,7 @@ public final class LaunchAtLoginController: ObservableObject {
             message = "Разрешите QuickCal в Системных настройках → Основные → Объекты входа."
         case .notFound:
             isEnabled = false
-            message = "Установите QuickCal в папку «Программы», затем запустите снова."
+            message = nil
         @unknown default:
             isEnabled = false
             message = "Не удалось определить состояние автозапуска."
