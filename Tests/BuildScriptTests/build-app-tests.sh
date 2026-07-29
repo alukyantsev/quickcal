@@ -28,6 +28,7 @@ cp "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/Support/Info.plist" \
     "${PROJECT_DIR}/Support/Info.plist"
 printf 'fixture executable\n' > "${BIN_DIR}/QuickCal"
 printf 'fixture icon\n' > "${PROJECT_DIR}/Support/QuickCal.icns"
+printf 'fixture modern asset catalog\n' > "${PROJECT_DIR}/Support/Assets.car"
 printf '"app.quit" = "Quit QuickCal";\n' \
     > "${RESOURCE_BUNDLE}/en.lproj/Localizable.strings"
 printf '"app.quit" = "Выйти из QuickCal";\n' \
@@ -148,12 +149,32 @@ cmp "${PROJECT_DIR}/Support/QuickCal.icns" "${INSTALLED_ICON}" >/dev/null || {
     exit 1
 }
 
+INSTALLED_ASSET_CATALOG="${PROJECT_DIR}/dist/QuickCal.app/Contents/Resources/Assets.car"
+cmp "${PROJECT_DIR}/Support/Assets.car" "${INSTALLED_ASSET_CATALOG}" >/dev/null || {
+    echo "not ok - Assets.car must be copied into the app bundle" >&2
+    exit 1
+}
+
+if [[ -e "${PROJECT_DIR}/dist/QuickCal.app/Contents/Resources/AppIcon.icon" ]]; then
+    echo "not ok - the raw Icon Composer package must not be copied into the app bundle" >&2
+    exit 1
+fi
+
 ICON_FILE="$(
     /usr/bin/plutil -extract CFBundleIconFile raw \
         "${PROJECT_DIR}/dist/QuickCal.app/Contents/Info.plist"
 )"
 if [[ "${ICON_FILE}" != "QuickCal.icns" ]]; then
     echo "not ok - CFBundleIconFile must reference QuickCal.icns" >&2
+    exit 1
+fi
+
+ICON_NAME="$(
+    /usr/bin/plutil -extract CFBundleIconName raw \
+        "${PROJECT_DIR}/dist/QuickCal.app/Contents/Info.plist"
+)"
+if [[ "${ICON_NAME}" != "AppIcon" ]]; then
+    echo "not ok - CFBundleIconName must reference AppIcon in Assets.car" >&2
     exit 1
 fi
 
@@ -180,6 +201,29 @@ fi
 mv "${TEST_ROOT}/missing-QuickCal.icns" \
     "${PROJECT_DIR}/Support/QuickCal.icns"
 
+mv "${PROJECT_DIR}/Support/Assets.car" "${TEST_ROOT}/missing-Assets.car"
+MISSING_ASSET_CATALOG_ERROR="${TEST_ROOT}/missing-asset-catalog-error.log"
+
+if PATH="${MOCK_BIN}:${PATH}" \
+    SDKROOT="${SDK_ROOT}" \
+    QUICKCAL_TEST_LOG="${LOG_FILE}" \
+    QUICKCAL_TEST_BIN_DIR="${BIN_DIR}" \
+        "${PROJECT_DIR}/Scripts/build-app.sh" \
+        >"${TEST_ROOT}/missing-asset-catalog-output.log" \
+        2>"${MISSING_ASSET_CATALOG_ERROR}"
+then
+    echo "not ok - a missing Assets.car must fail the build" >&2
+    exit 1
+fi
+
+if [[ "$(<"${MISSING_ASSET_CATALOG_ERROR}")" != *"missing modern application icon"* ]]; then
+    echo "not ok - missing Assets.car failure must be actionable" >&2
+    exit 1
+fi
+
+mv "${TEST_ROOT}/missing-Assets.car" \
+    "${PROJECT_DIR}/Support/Assets.car"
+
 mv "${RESOURCE_BUNDLE}" "${TEST_ROOT}/missing-resource-bundle"
 MISSING_RESOURCE_ERROR="${TEST_ROOT}/missing-resource-error.log"
 
@@ -202,3 +246,4 @@ fi
 
 echo "ok - localization resources are packaged with fail-fast validation"
 echo "ok - QuickCal.icns is packaged with fail-fast validation"
+echo "ok - Assets.car is packaged without copying the raw Icon Composer source"

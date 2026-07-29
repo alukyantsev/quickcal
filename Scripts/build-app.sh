@@ -10,6 +10,8 @@ RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 RESOURCE_BUNDLE_NAME="QuickCal_QuickCalKit.bundle"
 APP_ICON_NAME="QuickCal.icns"
 APP_ICON_SOURCE="${PROJECT_DIR}/Support/${APP_ICON_NAME}"
+MODERN_APP_ICON_NAME="Assets.car"
+MODERN_APP_ICON_SOURCE="${PROJECT_DIR}/Support/${MODERN_APP_ICON_NAME}"
 
 build_release() {
     swift build --package-path "${PROJECT_DIR}" -c release --arch arm64
@@ -81,12 +83,18 @@ if [[ ! -f "${APP_ICON_SOURCE}" ]]; then
     exit 1
 fi
 
+if [[ ! -f "${MODERN_APP_ICON_SOURCE}" ]]; then
+    echo "error: missing modern application icon: ${MODERN_APP_ICON_SOURCE}" >&2
+    exit 1
+fi
+
 rm -rf "${APP_DIR}"
 mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
 cp "${BIN_DIR}/QuickCal" "${MACOS_DIR}/QuickCal"
 cp "${PROJECT_DIR}/Support/Info.plist" "${CONTENTS_DIR}/Info.plist"
 cp -R "${RESOURCE_BUNDLE_SOURCE}" "${RESOURCES_DIR}/${RESOURCE_BUNDLE_NAME}"
 cp "${APP_ICON_SOURCE}" "${RESOURCES_DIR}/${APP_ICON_NAME}"
+cp "${MODERN_APP_ICON_SOURCE}" "${RESOURCES_DIR}/${MODERN_APP_ICON_NAME}"
 chmod 755 "${MACOS_DIR}/QuickCal"
 
 codesign --force --deep --sign - "${APP_DIR}"

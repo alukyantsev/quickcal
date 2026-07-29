@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 "${PROJECT_DIR}/Tests/BuildScriptTests/build-app-tests.sh"
+"${PROJECT_DIR}/Tests/IconScriptTests/modern-app-icon-tests.sh"
 
 TESTING_FRAMEWORK_DIRECTORY=""
 for developer_directory in \
