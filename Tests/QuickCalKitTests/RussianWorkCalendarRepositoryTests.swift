@@ -73,6 +73,25 @@ struct RussianWorkCalendarRepositoryTests {
         }
     }
 
+    private final class TestClock: @unchecked Sendable {
+        private let lock = NSLock()
+        private var storedNow: Date
+
+        init(now: Date) {
+            storedNow = now
+        }
+
+        func now() -> Date {
+            lock.withLock { storedNow }
+        }
+
+        func advance(by interval: TimeInterval) {
+            lock.withLock {
+                storedNow = storedNow.addingTimeInterval(interval)
+            }
+        }
+    }
+
     private func rawData(firstCode: UInt8 = Character("0").asciiValue!) -> Data {
         var bytes = [UInt8](
             repeating: Character("0").asciiValue!,
@@ -290,10 +309,10 @@ struct RussianWorkCalendarRepositoryTests {
     }
 
     @Test
-    func unsupportedFutureResponseIsRetriedAndAcceptedWhenDataAppears() async {
+    func parseFailureWithoutCacheIsRetriedOnlyAfterOneDay() async {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
-        let now = date(2026, 7, 29)
+        let clock = TestClock(now: date(2026, 7, 29))
         let client = SequencedClient([
             .data(Data("199".utf8)),
             .data(rawData(firstCode: Character("8").asciiValue!)),
@@ -301,16 +320,78 @@ struct RussianWorkCalendarRepositoryTests {
         let repository = RussianWorkCalendarRepository(
             client: client,
             cache: RussianWorkCalendarCache(directory: directory),
-            now: { now },
+            now: { clock.now() },
             timeZone: TimeZone(secondsFromGMT: 0)!
         )
 
         let unsupported = await repository.calendar(for: 2031)
+        clock.advance(by: 23 * 60 * 60)
+        let throttled = await repository.calendar(for: 2031)
+        clock.advance(by: 60 * 60)
         let laterAvailable = await repository.calendar(for: 2031)
 
         #expect(unsupported == nil)
+        #expect(throttled == nil)
         #expect(laterAvailable?.code(month: 1, day: 1) == .holiday)
         #expect(await client.requestedYears == [2031, 2031])
+    }
+
+    @Test
+    func networkFailureWithoutCacheIsRetriedOnlyAfterOneDay() async {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let clock = TestClock(now: date(2026, 7, 29))
+        let client = SequencedClient([
+            .failure,
+            .data(rawData(firstCode: Character("8").asciiValue!)),
+        ])
+        let repository = RussianWorkCalendarRepository(
+            client: client,
+            cache: RussianWorkCalendarCache(directory: directory),
+            now: { clock.now() },
+            timeZone: TimeZone(secondsFromGMT: 0)!
+        )
+
+        let unavailable = await repository.calendar(for: 2031)
+        clock.advance(by: 23 * 60 * 60)
+        let throttled = await repository.calendar(for: 2031)
+        clock.advance(by: 60 * 60)
+        let laterAvailable = await repository.calendar(for: 2031)
+
+        #expect(unavailable == nil)
+        #expect(throttled == nil)
+        #expect(laterAvailable?.code(month: 1, day: 1) == .holiday)
+        #expect(await client.requestedYears == [2031, 2031])
+    }
+
+    @Test
+    func freshDiskCacheReadDoesNotDelayRefreshWhenItBecomesStale() async throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let clock = TestClock(now: date(2026, 7, 29))
+        let cache = RussianWorkCalendarCache(directory: directory)
+        try await cache.save(
+            rawData: rawData(firstCode: Character("1").asciiValue!),
+            for: 2026,
+            fetchedAt: clock.now().addingTimeInterval(-23 * 60 * 60)
+        )
+        let client = SequencedClient([
+            .data(rawData(firstCode: Character("8").asciiValue!)),
+        ])
+        let repository = RussianWorkCalendarRepository(
+            client: client,
+            cache: cache,
+            now: { clock.now() },
+            timeZone: TimeZone(secondsFromGMT: 0)!
+        )
+
+        let freshDisk = try #require(await repository.calendar(for: 2026))
+        clock.advance(by: 2 * 60 * 60)
+        let refreshed = try #require(await repository.calendar(for: 2026))
+
+        #expect(freshDisk.code(month: 1, day: 1) == .dayOff)
+        #expect(refreshed.code(month: 1, day: 1) == .holiday)
+        #expect(await client.requestedYears == [2026])
     }
 
     @Test

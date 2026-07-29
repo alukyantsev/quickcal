@@ -8,13 +8,16 @@ final class WorkCalendarController: ObservableObject {
 
     private let repository: RussianWorkCalendarRepository?
     private let timeZone: TimeZone
+    private let now: @Sendable () -> Date
     private var loadingYears: Set<Int> = []
 
     init(
         repository: RussianWorkCalendarRepository? = nil,
-        timeZone: TimeZone = .autoupdatingCurrent
+        timeZone: TimeZone = .autoupdatingCurrent,
+        now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.timeZone = timeZone
+        self.now = now
 
         if let repository {
             self.repository = repository
@@ -36,8 +39,21 @@ final class WorkCalendarController: ObservableObject {
         let years = Set(month.weeks.flatMap(\.days).compactMap {
             CalendarDate(date: $0.date, timeZone: timeZone)?.year
         })
-        let pendingYears = years.filter {
-            calendars[$0] == nil && !loadingYears.contains($0)
+        let currentYear = CalendarDate(
+            date: now(),
+            timeZone: timeZone
+        )?.year
+        let pendingYears = years.filter { year in
+            guard !loadingYears.contains(year) else {
+                return false
+            }
+            guard calendars[year] != nil else {
+                return true
+            }
+            guard let currentYear else {
+                return false
+            }
+            return year >= currentYear
         }
         guard !pendingYears.isEmpty else {
             return

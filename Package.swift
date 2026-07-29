@@ -56,7 +56,7 @@ let package = Package(
         .executableTarget(name: "QuickCal", dependencies: ["QuickCalKit"]),
         .testTarget(
             name: "QuickCalKitTests",
-            dependencies: ["QuickCalKit"],
+            dependencies: ["QuickCalKit", "QuickCal"],
             swiftSettings: testingSwiftSettings,
             linkerSettings: testingLinkerSettings
         ),

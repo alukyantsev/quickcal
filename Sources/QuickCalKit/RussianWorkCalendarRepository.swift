@@ -7,6 +7,11 @@ public actor RussianWorkCalendarRepository {
         let fetchedAt: Date
     }
 
+    private struct Resolution: Sendable {
+        let storedCalendar: StoredCalendar?
+        let didAttemptRefresh: Bool
+    }
+
     private static let refreshInterval: TimeInterval = 24 * 60 * 60
 
     private let client: any IsDayOffLoading
@@ -15,7 +20,7 @@ public actor RussianWorkCalendarRepository {
     private let timeZone: TimeZone
 
     private var memory: [Int: StoredCalendar] = [:]
-    private var inFlight: [Int: Task<StoredCalendar?, Never>] = [:]
+    private var inFlight: [Int: Task<Resolution, Never>] = [:]
     private var lastRefreshAttempt: [Int: Date] = [:]
 
     public init(
@@ -36,27 +41,21 @@ public actor RussianWorkCalendarRepository {
         }
 
         if let task = inFlight[year] {
-            return await task.value?.calendar
+            return await task.value.storedCalendar?.calendar
         }
 
         let requestDate = now()
-        if let cached = memory[year],
-           Self.needsRefresh(
-               year: year,
-               fetchedAt: cached.fetchedAt,
-               now: requestDate,
-               timeZone: timeZone
-           ),
-           let previousAttempt = lastRefreshAttempt[year],
+        if let previousAttempt = lastRefreshAttempt[year],
            requestDate.timeIntervalSince(previousAttempt) < Self.refreshInterval
         {
-            return cached.calendar
+            return memory[year]?.calendar
         }
 
-        let task = Task<StoredCalendar?, Never> {
+        let memoryEntry = memory[year]
+        let task = Task<Resolution, Never> {
             await Self.resolve(
                 year: year,
-                memoryEntry: memory[year],
+                memoryEntry: memoryEntry,
                 client: client,
                 cache: cache,
                 now: requestDate,
@@ -64,14 +63,16 @@ public actor RussianWorkCalendarRepository {
             )
         }
         inFlight[year] = task
-        lastRefreshAttempt[year] = requestDate
 
-        let result = await task.value
+        let resolution = await task.value
         inFlight[year] = nil
-        if let result {
-            memory[year] = result
+        if resolution.didAttemptRefresh {
+            lastRefreshAttempt[year] = requestDate
         }
-        return result?.calendar
+        if let storedCalendar = resolution.storedCalendar {
+            memory[year] = storedCalendar
+        }
+        return resolution.storedCalendar?.calendar
     }
 
     public static func fallbackStatus(
@@ -95,7 +96,7 @@ public actor RussianWorkCalendarRepository {
         cache: any RussianWorkCalendarCaching,
         now: Date,
         timeZone: TimeZone
-    ) async -> StoredCalendar? {
+    ) async -> Resolution {
         var cached = memoryEntry
 
         if cached == nil {
@@ -123,7 +124,10 @@ public actor RussianWorkCalendarRepository {
                now: now,
                timeZone: timeZone
            ) {
-            return cached
+            return Resolution(
+                storedCalendar: cached,
+                didAttemptRefresh: false
+            )
         }
 
         do {
@@ -142,9 +146,15 @@ public actor RussianWorkCalendarRepository {
                 for: year,
                 fetchedAt: now
             )
-            return downloaded
+            return Resolution(
+                storedCalendar: downloaded,
+                didAttemptRefresh: true
+            )
         } catch {
-            return cached
+            return Resolution(
+                storedCalendar: cached,
+                didAttemptRefresh: true
+            )
         }
     }
 
