@@ -13,6 +13,8 @@
     <string>QuickCal</string>
     <key>CFBundleExecutable</key>
     <string>QuickCal</string>
+    <key>CFBundleIconFile</key>
+    <string>QuickCal.icns</string>
     <key>CFBundleIdentifier</key>
     <string>local.andrei.quickcal</string>
     <key>CFBundleInfoDictionaryVersion</key>

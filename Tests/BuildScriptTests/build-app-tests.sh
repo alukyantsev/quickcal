@@ -27,6 +27,7 @@ cp "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/Scripts/build-app.sh" \
 cp "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/Support/Info.plist" \
     "${PROJECT_DIR}/Support/Info.plist"
 printf 'fixture executable\n' > "${BIN_DIR}/QuickCal"
+printf 'fixture icon\n' > "${PROJECT_DIR}/Support/QuickCal.icns"
 printf '"app.quit" = "Quit QuickCal";\n' \
     > "${RESOURCE_BUNDLE}/en.lproj/Localizable.strings"
 printf '"app.quit" = "Выйти из QuickCal";\n' \
@@ -141,6 +142,44 @@ if [[ "${FIRST_LOCALIZATION}" != "en" || "${SECOND_LOCALIZATION}" != "ru" ]]; th
     exit 1
 fi
 
+INSTALLED_ICON="${PROJECT_DIR}/dist/QuickCal.app/Contents/Resources/QuickCal.icns"
+cmp "${PROJECT_DIR}/Support/QuickCal.icns" "${INSTALLED_ICON}" >/dev/null || {
+    echo "not ok - QuickCal.icns must be copied into the app bundle" >&2
+    exit 1
+}
+
+ICON_FILE="$(
+    /usr/bin/plutil -extract CFBundleIconFile raw \
+        "${PROJECT_DIR}/dist/QuickCal.app/Contents/Info.plist"
+)"
+if [[ "${ICON_FILE}" != "QuickCal.icns" ]]; then
+    echo "not ok - CFBundleIconFile must reference QuickCal.icns" >&2
+    exit 1
+fi
+
+mv "${PROJECT_DIR}/Support/QuickCal.icns" "${TEST_ROOT}/missing-QuickCal.icns"
+MISSING_ICON_ERROR="${TEST_ROOT}/missing-icon-error.log"
+
+if PATH="${MOCK_BIN}:${PATH}" \
+    SDKROOT="${SDK_ROOT}" \
+    QUICKCAL_TEST_LOG="${LOG_FILE}" \
+    QUICKCAL_TEST_BIN_DIR="${BIN_DIR}" \
+        "${PROJECT_DIR}/Scripts/build-app.sh" \
+        >"${TEST_ROOT}/missing-icon-output.log" \
+        2>"${MISSING_ICON_ERROR}"
+then
+    echo "not ok - a missing application icon must fail the build" >&2
+    exit 1
+fi
+
+if [[ "$(<"${MISSING_ICON_ERROR}")" != *"missing application icon"* ]]; then
+    echo "not ok - missing icon failure must be actionable" >&2
+    exit 1
+fi
+
+mv "${TEST_ROOT}/missing-QuickCal.icns" \
+    "${PROJECT_DIR}/Support/QuickCal.icns"
+
 mv "${RESOURCE_BUNDLE}" "${TEST_ROOT}/missing-resource-bundle"
 MISSING_RESOURCE_ERROR="${TEST_ROOT}/missing-resource-error.log"
 
@@ -162,3 +201,4 @@ if [[ "$(<"${MISSING_RESOURCE_ERROR}")" != *"missing localization bundle"* ]]; t
 fi
 
 echo "ok - localization resources are packaged with fail-fast validation"
+echo "ok - QuickCal.icns is packaged with fail-fast validation"
