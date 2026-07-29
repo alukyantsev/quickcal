@@ -107,17 +107,30 @@ struct CalendarPopoverView: View {
 
     private var monthNavigation: some View {
         ZStack {
-            Text(verbatim: DatePresentation.monthTitle(
-                displayedMonth,
-                calendar: calendar,
-                localization: localization
-            ))
-            .font(.title2.weight(.semibold))
+            HStack(spacing: 0) {
+                Color.clear
+                    .frame(width: MonthNavigationLayout.sideReservation)
 
-            HStack(spacing: 2) {
+                Text(verbatim: DatePresentation.monthTitle(
+                    displayedMonth,
+                    calendar: calendar,
+                    localization: localization
+                ))
+                .font(.title2.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(MonthNavigationLayout.minimumTitleScale)
+                .allowsTightening(true)
+                .frame(maxWidth: .infinity)
+
+                Color.clear
+                    .frame(width: MonthNavigationLayout.sideReservation)
+            }
+
+            HStack(spacing: MonthNavigationLayout.controlSpacing) {
                 HoverIconButton(
                     title: localization.string(.previousMonth),
-                    systemImage: "chevron.left"
+                    systemImage: "chevron.left",
+                    controlSize: MonthNavigationLayout.navigationControlSize
                 ) {
                     moveMonth(by: -1)
                 }
@@ -128,13 +141,14 @@ struct CalendarPopoverView: View {
                     title: localization.string(.returnToToday),
                     systemImage: "calendar.badge.clock",
                     symbolSize: 15,
-                    controlSize: 30,
+                    controlSize: MonthNavigationLayout.todayControlSize,
                     action: showToday
                 )
 
                 HoverIconButton(
                     title: localization.string(.nextMonth),
-                    systemImage: "chevron.right"
+                    systemImage: "chevron.right",
+                    controlSize: MonthNavigationLayout.navigationControlSize
                 ) {
                     moveMonth(by: 1)
                 }
