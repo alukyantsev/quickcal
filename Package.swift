@@ -45,9 +45,11 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "QuickCalKit", targets: ["QuickCalKit"]),
+        .executable(name: "QuickCal", targets: ["QuickCal"]),
     ],
     targets: [
         .target(name: "QuickCalKit"),
+        .executableTarget(name: "QuickCal", dependencies: ["QuickCalKit"]),
         .testTarget(
             name: "QuickCalKitTests",
             dependencies: ["QuickCalKit"],
