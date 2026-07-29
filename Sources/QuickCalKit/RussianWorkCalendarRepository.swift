@@ -1,0 +1,150 @@
+import Foundation
+
+public actor RussianWorkCalendarRepository {
+    private struct StoredCalendar: Sendable {
+        let calendar: RussianWorkCalendar
+        let rawData: Data
+        let fetchedAt: Date
+    }
+
+    private static let refreshInterval: TimeInterval = 24 * 60 * 60
+
+    private let client: any IsDayOffLoading
+    private let cache: any RussianWorkCalendarCaching
+    private let now: @Sendable () -> Date
+    private let timeZone: TimeZone
+
+    private var memory: [Int: StoredCalendar] = [:]
+    private var inFlight: [Int: Task<StoredCalendar?, Never>] = [:]
+
+    public init(
+        client: any IsDayOffLoading,
+        cache: any RussianWorkCalendarCaching = RussianWorkCalendarCache(),
+        now: @escaping @Sendable () -> Date = { Date() },
+        timeZone: TimeZone = .autoupdatingCurrent
+    ) {
+        self.client = client
+        self.cache = cache
+        self.now = now
+        self.timeZone = timeZone
+    }
+
+    public func calendar(for year: Int) async -> RussianWorkCalendar? {
+        guard (1...9999).contains(year) else {
+            return nil
+        }
+
+        if let task = inFlight[year] {
+            return await task.value?.calendar
+        }
+
+        let task = Task<StoredCalendar?, Never> {
+            await Self.resolve(
+                year: year,
+                memoryEntry: memory[year],
+                client: client,
+                cache: cache,
+                now: now(),
+                timeZone: timeZone
+            )
+        }
+        inFlight[year] = task
+
+        let result = await task.value
+        inFlight[year] = nil
+        if let result {
+            memory[year] = result
+        }
+        return result?.calendar
+    }
+
+    public static func fallbackStatus(
+        for date: Date,
+        timeZone: TimeZone = .autoupdatingCurrent
+    ) -> WorkdayStatus {
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = timeZone
+        switch gregorian.component(.weekday, from: date) {
+        case 1, 7:
+            return .nonWorking
+        default:
+            return .working
+        }
+    }
+
+    private static func resolve(
+        year: Int,
+        memoryEntry: StoredCalendar?,
+        client: any IsDayOffLoading,
+        cache: any RussianWorkCalendarCaching,
+        now: Date,
+        timeZone: TimeZone
+    ) async -> StoredCalendar? {
+        var cached = memoryEntry
+
+        if cached == nil {
+            do {
+                if let diskEntry = try await cache.load(year: year),
+                   let parsed = try? RussianWorkCalendar(
+                       year: year,
+                       rawData: diskEntry.rawData
+                   ) {
+                    cached = StoredCalendar(
+                        calendar: parsed,
+                        rawData: diskEntry.rawData,
+                        fetchedAt: diskEntry.fetchedAt
+                    )
+                }
+            } catch {
+                // A cache miss or read error must not block network fallback.
+            }
+        }
+
+        if let cached,
+           !needsRefresh(
+               year: year,
+               fetchedAt: cached.fetchedAt,
+               now: now,
+               timeZone: timeZone
+           ) {
+            return cached
+        }
+
+        do {
+            let rawData = try await client.fetch(year: year)
+            let parsed = try RussianWorkCalendar(
+                year: year,
+                rawData: rawData
+            )
+            let downloaded = StoredCalendar(
+                calendar: parsed,
+                rawData: rawData,
+                fetchedAt: now
+            )
+            try? await cache.save(
+                rawData: rawData,
+                for: year,
+                fetchedAt: now
+            )
+            return downloaded
+        } catch {
+            return cached
+        }
+    }
+
+    private static func needsRefresh(
+        year: Int,
+        fetchedAt: Date,
+        now: Date,
+        timeZone: TimeZone
+    ) -> Bool {
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = timeZone
+        let currentYear = gregorian.component(.year, from: now)
+
+        if year < currentYear {
+            return false
+        }
+        return now.timeIntervalSince(fetchedAt) >= refreshInterval
+    }
+}
