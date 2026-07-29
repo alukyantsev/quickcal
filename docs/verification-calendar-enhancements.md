@@ -5,6 +5,10 @@
 Проверенный source state:
 
 ```text
+b9927ee feat: use QuickCal clock badge menu icon
+106c9fb feat: package QuickCal Finder icon
+e674868 fix: make QuickCal icon fallback self-contained
+e8f3ee8 feat: add QuickCal application icon assets
 a1cd688 feat: enhance QuickCal calendar interactions
 822eb50 fix: throttle stale calendar refresh failures
 7514b01 feat: add Russian work calendar data
@@ -27,6 +31,7 @@ afa28fe feat: persist selected calendar dates
 ```text
 ok - explicit SDKROOT performs one fresh arm64 release build
 ok - localization resources are packaged with fail-fast validation
+ok - QuickCal.icns is packaged with fail-fast validation
 ✔ Test run with 50 tests in 9 suites passed
 Проверки пройдены: tests=50, errors=0, failures=0.
 ```
@@ -66,29 +71,62 @@ satisfies its Designated Requirement
 ```text
 Contents/Resources/QuickCal_QuickCalKit.bundle/en.lproj/Localizable.strings
 Contents/Resources/QuickCal_QuickCalKit.bundle/ru.lproj/Localizable.strings
+Contents/Resources/QuickCal.icns
+```
+
+Контракт Finder icon проверен после release-сборки:
+
+```bash
+test -s dist/QuickCal.app/Contents/Resources/QuickCal.icns
+test "$(/usr/bin/plutil -extract CFBundleIconFile raw \
+    dist/QuickCal.app/Contents/Info.plist)" = "QuickCal.icns"
+```
+
+Обе команды завершились с exit `0`. `Support/QuickCal.icns`, ресурс в `dist` и
+ресурс установленного bundle имеют одинаковый SHA-256:
+
+```text
+ef974764ffdf59b56dc6a220913f4b00c60492bb09d0ec4609bf7599401d44d6
 ```
 
 Installed executable и `dist` имеют одинаковый SHA-256:
 
 ```text
-4af88733315fa45355bafb5f6ffac4878088295cdbe8d0d1227de8929059a41e
+4e9f159d4a7c4a1029805f14e42aee3e31af9db57f39232190d126c733e066f5
 ```
 
-`lsof` подтвердил, что финальный процесс загрузил:
+Проверка установленного bundle:
 
 ```text
-/Applications/QuickCal.app/Contents/MacOS/QuickCal
+/Applications/QuickCal.app/Contents/MacOS/QuickCal: Mach-O 64-bit executable arm64
+/Applications/QuickCal.app: valid on disk
+/Applications/QuickCal.app: satisfies its Designated Requirement
+99214 /Applications/QuickCal.app/Contents/MacOS/QuickCal
 ```
+
+Последняя строка — единственный запущенный process финального bundle.
+
+## Finder icon acceptance
+
+После `ditto` в `/Applications`, принудительной регистрации через `lsregister -f`
+и запуска `/Applications/QuickCal.app` resolved icon получен через
+`NSWorkspace.shared.icon(forFile:)`, а не скопирован из source asset.
+
+`docs/evidence/quickcal-finder-icon.png` — PNG `2048×2048`, SHA-256:
+
+```text
+8ce483f5331d9bed52224c6de2589f271cda4d05432a2776fcf2a36b796a9c2a
+```
+
+Визуальная проверка resolved icon: синий squircle, белый календарь, clock badge
+справа снизу; generic executable/grid icon отсутствует. Evidence содержит только
+иконку с прозрачным фоном, без постороннего desktop content.
 
 ## Review
 
-Реализация выполнена через субагентов.
-
-- Spec-review Tasks 1–3: PASS.
-- Code-quality review Tasks 1–3 нашёл один P2: повторный запрос при stale
-  cache и offline-сети. Исправлено в `822eb50`, добавлен regression test.
-- Spec-review Task 4: PASS.
-- Code-quality review Task 4: PASS.
+Task 4 проверяет артефакты Tasks 1–3 без изменения production Swift logic или
+icon assets. `git diff --check` и итоговый clean-state check выполнены перед
+commit.
 
 ## Runtime-приёмка
 
@@ -99,7 +137,8 @@ System Events, native AX и `screencapture` только заданной обл
 
 | Критерий | Фактический результат |
 |---|---|
-| Menu bar | `NSStatusItem`, размер 40×24 pt; неактивный glyph 36×33 px / 16,5 pt вместо прежних 26×24 px / 12 pt |
+| Menu bar | `calendar.badge.clock`; свежий optical bbox `36×34 px`, высота `17.00 pt`, ratio к 17-pt reference — `1.000` |
+| Finder icon | `QuickCal.icns` зарегистрирован в LaunchServices; resolved `NSWorkspace` evidence подтверждает синий squircle, белый календарь и clock badge |
 | Popover с номерами недель | 342×460 для июля 2026 |
 | Popover без номеров недель | 310×460; labels недель отсутствуют |
 | Системный язык | `AppleLanguages = [en-US, ru-RU]`; обычный запуск показывает английский UI |
@@ -119,7 +158,7 @@ System Events, native AX и `screencapture` только заданной обл
 | Объединение | 30 и 31 июля визуально образовали один зелёный pill |
 | Today priority | 29 июля остался синим с белым текстом рядом с зелёным pill |
 | Persistence | после UI quit/relaunch обе даты сохранили `Selected` |
-| Checkbox persistence | `showWeekNumbers=0` сохранился после quit/relaunch |
+| Checkbox persistence | после final acceptance `defaults read local.andrei.quickcal showWeekNumbers` вернул `1` |
 | Hover | визуально подтверждён animated hover-фон строки Quit; остальные hover-paths прошли source review и compile |
 | Выход | UI-кнопка Quit завершила процесс |
 | Финальный запуск | приложение запущено из `/Applications/QuickCal.app`, popover закрыт |
@@ -127,24 +166,20 @@ System Events, native AX и `screencapture` только заданной обл
 ## Visual evidence
 
 - [Menu bar icon через NSStatusItem](evidence/quickcal-menu-icon-nsstatusitem.png)
+- [Clock badge menu icon](evidence/quickcal-menu-icon-clock.png)
+- [Resolved Finder icon через NSWorkspace](evidence/quickcal-finder-icon.png)
 - [Календарь 342 pt: red weekends, green pill, blue today](evidence/quickcal-calendar-enhancements.png)
 - [Календарь 310 pt без недель и hover строки Quit](evidence/quickcal-calendar-enhancements-no-weeks-hover.png)
 
-Снимки содержат только status item или окно QuickCal, без unrelated desktop
-content.
-
-Runtime-тест `Tests/RuntimeTests/menu-bar-icon-size.sh` измеряет glyph на
-системной подсветке status item: 36×34 px / 17 pt, то есть `1.000` от
-17-point reference, измеренного у ChatGPT на пользовательском снимке.
-Предыдущая `MenuBarExtra`-версия ожидаемо не проходит этот тест:
-12 pt, ratio `0.706`.
+Снимки содержат только status item, окно QuickCal или resolved app icon, без
+unrelated desktop content.
 
 ## Финальное состояние
 
-- QuickCal запущен из `/Applications/QuickCal.app`.
-- Popover закрыт.
+- QuickCal запущен из `/Applications/QuickCal.app` (один process).
+- Popover закрыт: `QuickCal on-screen windows: 0`.
+- `showWeekNumbers` сохранён включённым: `1`.
 - Системный английский UI активен; системные настройки языка не менялись.
-- Номера недель включены.
 - Состояние launch at login сохранено без изменения.
 - Две тестовые отметки дат удалены после проверки.
 - Валидный cache производственного календаря сохранён для offline-работы.
