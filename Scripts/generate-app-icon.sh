@@ -41,37 +41,60 @@ render 512 icon_512x512.png
 render 1024 icon_512x512@2x.png
 
 mkdir -p "$(dirname "${OUTPUT_ICNS}")"
-if ! iconutil -c icns "${ICONSET_DIRECTORY}" -o "${OUTPUT_ICNS}" >/dev/null 2>&1; then
-    # macOS 26.5's iconutil rejects even iconsets that it just extracted from
-    # a system .icns. Serialize the documented PNG-backed ICNS chunks from the
-    # same rendered representations so the public interface remains stable.
-    python3 - "${ICONSET_DIRECTORY}" "${OUTPUT_ICNS}" <<'PY'
-import struct
-import sys
-from pathlib import Path
-
-iconset = Path(sys.argv[1])
-output = Path(sys.argv[2])
-representations = (
-    (b"icp4", "icon_16x16.png"),
-    (b"ic11", "icon_16x16@2x.png"),
-    (b"icp5", "icon_32x32.png"),
-    (b"ic12", "icon_32x32@2x.png"),
-    (b"ic07", "icon_128x128.png"),
-    (b"ic13", "icon_128x128@2x.png"),
-    (b"ic08", "icon_256x256.png"),
-    (b"ic14", "icon_256x256@2x.png"),
-    (b"ic09", "icon_512x512.png"),
-    (b"ic10", "icon_512x512@2x.png"),
+RAW_CHUNK_TYPES=(
+    icp4 ic11 icp5 ic12 ic07 ic13 ic08 ic14 ic09 ic10
+)
+RAW_FILENAMES=(
+    icon_16x16.png icon_16x16@2x.png icon_32x32.png icon_32x32@2x.png
+    icon_128x128.png icon_128x128@2x.png icon_256x256.png icon_256x256@2x.png
+    icon_512x512.png icon_512x512@2x.png
 )
 
-chunks = []
-for chunk_type, filename in representations:
-    image = (iconset / filename).read_bytes()
-    chunks.append(chunk_type + struct.pack(">I", len(image) + 8) + image)
+write_u32_be() {
+    local value="$1"
+    local byte
+    local shift
 
-payload = b"".join(chunks)
-output.write_bytes(b"icns" + struct.pack(">I", len(payload) + 8) + payload)
-PY
+    for shift in 24 16 8 0; do
+        byte=$(( (value >> shift) & 255 ))
+        printf "\\$(printf '%03o' "${byte}")"
+    done
+}
+
+serialize_raw_icns() {
+    local total_size=8
+    local index
+    local image_size
+    local image_path
+
+    for index in "${!RAW_FILENAMES[@]}"; do
+        image_path="${ICONSET_DIRECTORY}/${RAW_FILENAMES[${index}]}"
+        image_size="$(wc -c < "${image_path}")"
+        total_size=$((total_size + image_size + 8))
+    done
+
+    {
+        printf 'icns'
+        write_u32_be "${total_size}"
+
+        for index in "${!RAW_FILENAMES[@]}"; do
+            image_path="${ICONSET_DIRECTORY}/${RAW_FILENAMES[${index}]}"
+            image_size="$(wc -c < "${image_path}")"
+            printf '%s' "${RAW_CHUNK_TYPES[${index}]}"
+            write_u32_be "$((image_size + 8))"
+            cat "${image_path}"
+        done
+    } > "${OUTPUT_ICNS}"
+
+    echo "Использован raw ICNS fallback" >&2
+}
+
+# macOS 26.5's iconutil rejects even iconsets that it just extracted from a
+# system .icns. Keep this serializer to Bash and POSIX utilities so that the
+# fallback has no interpreter dependency. The environment switch is test-only.
+if [[ "${QUICKCAL_FORCE_RAW_ICNS_FALLBACK:-0}" == "1" ]]; then
+    serialize_raw_icns
+elif ! iconutil -c icns "${ICONSET_DIRECTORY}" -o "${OUTPUT_ICNS}" >/dev/null 2>&1; then
+    serialize_raw_icns
 fi
 echo "Готово: ${OUTPUT_ICNS}"
