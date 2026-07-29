@@ -1,6 +1,6 @@
 # Проверка QuickCal — 2026-07-29
 
-Проверенный commit приложения: `6896126 fix: treat missing login item as disabled`.
+Проверенный commit приложения: `377be73 fix: expose month navigation labels`.
 
 Установленный артефакт: `/Applications/QuickCal.app`.
 
@@ -21,61 +21,65 @@ Serial number, hardware UUID, provisioning UDID, username и другие
 
 ## Автоматические проверки
 
-### Почему plain `swift test` недостаточно
-
-Фактически выполнена команда:
-
-```bash
-swift test
-```
-
-Результат: exit code `0`, сборка завершается строкой:
-
-```text
-Build complete! (1.81s)
-```
-
-При этом в выводе нет `Test run started`, списка тестов или итогового test
-result. В этом Command Line Tools окружении target-local framework path не
-попадает в автоматически сгенерированный SwiftPM runner. Поэтому plain-команда
-собирает package и runner, но не подтверждает фактическое исполнение Apple
-Swift Testing suite.
-
-### Поддерживаемый полный Swift Testing suite
+### Каноническая команда
 
 Команда:
 
 ```bash
-swift test --disable-xctest --enable-swift-testing \
-  -Xswiftc -F \
-  -Xswiftc /Library/Developer/CommandLineTools/Library/Developer/Frameworks \
-  --xunit-output /private/tmp/quickcal-review-xunit.xml
+./Scripts/test.sh
 ```
 
 Результат:
 
 ```text
+ok - explicit SDKROOT performs one fresh arm64 release build
 ✔ Test run with 11 tests in 2 suites passed after 0.002 seconds.
+Проверки пройдены: tests=11, errors=0, failures=0.
 ```
 
-xUnit:
+Скрипт сначала запускает shell regression suite
+`Tests/BuildScriptTests/build-app-tests.sh`, затем Apple Swift Testing с
+обнаруженным `Testing.framework` и обязательным непустым xUnit. Он завершился
+с кодом `0`: 11 тестов в 2 suites, 0 errors, 0 failures.
 
-```xml
-<testsuite name="TestResults" errors="0" tests="11" failures="0" skipped="0" time="0.00219475">
-```
+### Почему plain `swift test` не является канонической проверкой
+
+На этом же host ранее отдельно выполнялся `swift test`: команда завершалась с
+кодом `0` после сборки, но без `Test run started`, списка тестов и итогового
+test result. Поэтому такой вывод не использован как доказательство исполнения
+suite. Финальная проверка commit `377be73` выполнена только через
+`./Scripts/test.sh`, который явно настраивает framework path и проверяет xUnit.
 
 ### Release-сборка
 
-Команда:
+Каноническая команда:
 
 ```bash
 ./Scripts/build-app.sh
 ```
 
+Финальный handoff build выполнен координатором на том же app source commit
+`377be73`. Результат: exit code `0`.
+
+```text
+Build complete! (1.86s)
+dist/QuickCal.app/Contents/MacOS/QuickCal: Mach-O 64-bit executable arm64
+dist/QuickCal.app: valid on disk
+dist/QuickCal.app: satisfies its Designated Requirement
+Готово: .../dist/QuickCal.app
+```
+
+Дополнительно на реальном SDK path повторена ветка явного `SDKROOT`:
+
+```bash
+SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk \
+  ./Scripts/build-app.sh
+```
+
 Результат: exit code `0`.
 
 ```text
-Build complete! (1.73s)
+Build complete! (4.14s)
 dist/QuickCal.app/Contents/MacOS/QuickCal: Mach-O 64-bit executable arm64
 dist/QuickCal.app: valid on disk
 dist/QuickCal.app: satisfies its Designated Requirement
@@ -107,14 +111,15 @@ bundle: он впервые создан нами из проверенного 
 ditto dist/QuickCal.app /Applications/QuickCal.app
 ```
 
-После TDD-fix обновлялся только этот же in-scope bundle. До обновления были
-повторно проверены оба bundle id и SHA старого установленного executable:
+После этого обновлялся только тот же in-scope bundle. Перед финальным
+handoff-обновлением coordinator build из того же app source commit `377be73`
+были повторно проверены оба bundle id и SHA старого установленного executable:
 
 ```text
 source_id=local.andrei.quickcal
 target_id=local.andrei.quickcal
 old installed SHA-256:
-c1727317571ec707b2d8eff659e50ec7485e39f07c28b2dd1e1c0ad9b2f603cb
+33c7b06ef20bb5c52c44c8d5466f43a5c4ba4ecccd3e4141a8f516fc6e21ab1f
 ```
 
 Отдельное согласование происхождения существующего bundle не требовалось и не
@@ -145,8 +150,8 @@ cmp \
 Оба пути и результаты:
 
 ```text
-5ccea7363089fb25f05b7bce1a9da665040bed87878ccb5519a06efe26f3bb5e  /Applications/QuickCal.app/Contents/MacOS/QuickCal
-5ccea7363089fb25f05b7bce1a9da665040bed87878ccb5519a06efe26f3bb5e  dist/QuickCal.app/Contents/MacOS/QuickCal
+65b2e135e9a703d8577b4efab6ddf1c60a689892076e2cb2eced5d6123f4ff6c  /Applications/QuickCal.app/Contents/MacOS/QuickCal
+65b2e135e9a703d8577b4efab6ddf1c60a689892076e2cb2eced5d6123f4ff6c  dist/QuickCal.app/Contents/MacOS/QuickCal
 
 cmp: exit code 0
 codesign --verify --deep --strict: valid on disk
@@ -156,14 +161,23 @@ LSMinimumSystemVersion: 14.0
 LSUIElement: true
 ```
 
+После запуска `lsof -a -p <pid> -d txt -Fn` подтвердил загруженный executable
+`/Applications/QuickCal.app/Contents/MacOS/QuickCal`; его SHA совпал с
+установленным и `dist` hash выше.
+
 ## Runtime-приёмка
 
 Проверка выполнена на macOS через разрешённые пользователем System Events,
-`osascript` и `screencapture`.
+`osascript`, native Accessibility API и `screencapture`.
+
+Полная runtime-приёмка ниже выполнена для app source commit `377be73`. После
+финальной coordinator rebuild исходный код приложения не менялся. Exact
+handoff binary с новым SHA установлен повторно, и для него отдельно повторён
+минимальный runtime smoke.
 
 | Критерий | Фактический результат |
 |---|---|
-| Запуск установленного приложения | `open /Applications/QuickCal.app`; процесс запустился |
+| Запуск установленного приложения | `open /Applications/QuickCal.app`; загружен exact handoff executable с SHA-256 `65b2e135…f4ff6c` |
 | Dock | QuickCal отсутствует |
 | Menu bar | Монохромная system calendar icon присутствует; AX title `Календарь`, role `AXMenuBarItem` |
 | Popover | Открывается в system appearance: `AXWindow`, `AXSystemDialog`, размер `342×417`; повторный AXPress закрывает его, `window count=0` |
@@ -171,18 +185,23 @@ LSUIElement: true
 | Текущая дата | `среда, 29 июля 2026 г.` |
 | Текущий месяц | `июль 2026 г.` |
 | Сетка | Пн–Вс, пять полных недель, номера 27–31 |
-| Сегодня | Ячейка `29` имеет AX value `Сегодня`; визуально выделена текущим синим macOS accent color |
+| Locale-aware digits | Day и week numbers реализованы через `Text(..., format: .number)`, week AX label — через локализованный `Text` interpolation; в текущей русской locale отображаются `1`–`31` и `Неделя 27`–`Неделя 31` |
+| Сегодня | AX содержит semantic value `Сегодня`; ячейка `29` визуально выделена текущим синим macOS accent color |
+| AX label назад | Левый `AXButton`, global X `2893`, `AXIdentifier=chevron.left`; native `AXDescription` и `AXAttributedDescription` равны `Предыдущий месяц` |
+| AX label вперёд | Правый `AXButton`, global X `3194.5`, `AXIdentifier=chevron.right`; native `AXDescription` и `AXAttributedDescription` равны `Следующий месяц` |
 | Назад/вперёд | `июль 2026` → `июнь 2026` → `июль 2026` |
-| Граница года | `декабрь 2026` → `январь 2027` → `декабрь 2026` |
+| Граница года | `июль 2026` → `декабрь 2026` → `январь 2027` → `декабрь 2026` → `июль 2026`; все значения прочитаны как AX month titles |
 | Номера недель OFF | Checkbox `0`, AX-элементов `49`, week-number labels отсутствуют |
-| Persistence OFF | После quit/relaunch checkbox остался `0` |
+| Persistence OFF | После штатного UI quit (`pgrep` exit `1`) и relaunch checkbox остался `0`, AX-элементов `49`, week-number labels отсутствуют |
 | Номера недель ON | Checkbox `1`, AX-элементов `54`, видны `Неделя 27` — `Неделя 31` |
-| Persistence ON | После quit/relaunch checkbox остался `1` |
-| Launch at login ON | OFF → ON: checkbox стал `1`, ошибок и `requiresApproval` нет |
-| Launch at login после reopen | После закрытия/повторного открытия popover checkbox остался `1` |
-| Launch at login OFF | ON → OFF: checkbox стал `0`, ошибок нет |
-| Финальное состояние login item | После закрытия/повторного открытия popover checkbox остался `0` |
+| Persistence ON | После штатного UI quit (`pgrep` exit `1`) и relaunch checkbox остался `1`, AX-элементов `54`, видны `Неделя 27` — `Неделя 31` |
+| Launch at login ON | OFF → ON: checkbox стал `1`; список AX texts не содержит сообщения об ошибке или `requiresApproval` |
+| Launch at login после reopen | После закрытия/повторного открытия popover checkbox остался `1`, сообщений нет |
+| Launch at login OFF | ON → OFF: checkbox стал `0`, сообщений нет |
+| Финальное состояние login item | После закрытия/повторного открытия popover и после quit/relaunch checkbox остался `0` |
 | Выход | Кнопка «Выйти из QuickCal» завершила процесс; `pgrep -x QuickCal` вернул код `1` |
+| Финальный relaunch | Новый процесс запущен из `/Applications/QuickCal.app`; persisted state: week numbers `1`, launch at login `0`; popover снова закрыт |
+| Handoff smoke | `lsof` показывает installed executable с SHA `65b2e135…f4ff6c`; QuickCal отсутствует в Dock; status item `Календарь` имеет role `AXMenuBarItem`; popover `342×417` открывается; обе semantic navigation labels доступны; week numbers `1`, login `0`, сообщений нет; popover закрыт |
 
 ## Visual evidence
 
@@ -207,6 +226,10 @@ Popover screenshot показывает:
 - выключенный launch-at-login;
 - отсутствие ложного `.notFound` сообщения.
 
+Screenshot не перезаписывался при handoff: coordinator build собран из того же
+app source commit `377be73`, визуальное содержимое не изменилось, а совпадение
+финального UI state подтверждено повторным smoke exact binary.
+
 Системный `AppleAccentColor` не переопределён: `defaults read -g
 AppleAccentColor` сообщает, что пара domain/default отсутствует. Цвет
 подсветки в приложении соответствует текущему системному default accent;
@@ -218,13 +241,20 @@ AppleAccentColor` сообщает, что пара domain/default отсутс�
 После явного разрешения пользователя применён встроенный macOS fallback.
 
 Menu bar item и transient popover находились на display с отрицательным
-глобальным Y origin. Обычный fullscreen `screencapture` не сохранял popover.
-Его onscreen CoreGraphics window id был получен read-only и передан в
-`screencapture -l`; приложение и системные настройки для этого не изменялись.
+глобальным Y origin. Onscreen CoreGraphics window id был получен read-only и
+передан в `screencapture -l`. Поэтому файл содержит только окно QuickCal, без
+menu bar, Dock и другого desktop context.
+
+System Events показывает semantic SwiftUI label как нечитаемый
+`AXAttributedDescription`. Для точной проверки его значение было прочитано
+read-only через native Accessibility API: обе navigation labels совпали с
+русскими строками выше.
 
 ## Финальное состояние
 
-- QuickCal снова запущен, PID на момент проверки: `38129`.
+- QuickCal снова запущен, PID на момент проверки: `57876`.
+- Загружен `/Applications/QuickCal.app/Contents/MacOS/QuickCal` с SHA-256
+  `65b2e135e9a703d8577b4efab6ddf1c60a689892076e2cb2eced5d6123f4ff6c`.
 - Popover закрыт.
 - Номера недель включены.
 - Launch at login выключен.
