@@ -78,10 +78,10 @@ struct CalendarPopoverView: View {
             Button {
                 moveMonth(by: -1)
             } label: {
-                Image(systemName: "chevron.left")
+                Label("Предыдущий месяц", systemImage: "chevron.left")
+                    .labelStyle(.iconOnly)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Предыдущий месяц")
             .help("Предыдущий месяц")
 
             Spacer()
@@ -94,10 +94,10 @@ struct CalendarPopoverView: View {
             Button {
                 moveMonth(by: 1)
             } label: {
-                Image(systemName: "chevron.right")
+                Label("Следующий месяц", systemImage: "chevron.right")
+                    .labelStyle(.iconOnly)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Следующий месяц")
             .help("Следующий месяц")
         }
     }
