@@ -5,6 +5,8 @@
 Проверенный source state:
 
 ```text
+e3398a3 fix: refresh production calendar data reliably
+29f3a90 fix: reserve space for calendar header controls
 783f712 feat: package modern QuickCal app icon
 b9927ee feat: use QuickCal clock badge menu icon
 106c9fb feat: package QuickCal Finder icon
@@ -36,8 +38,8 @@ ok - QuickCal.icns is packaged with fail-fast validation
 ok - Assets.car is packaged without copying the raw Icon Composer source
 ok - modern icon generator publishes the AppIcon Assets.car produced by actool
 ok - modern icon generator fails clearly when actool is unavailable
-✔ Test run with 50 tests in 9 suites passed
-Проверки пройдены: tests=50, errors=0, failures=0.
+✔ Test run with 54 tests in 11 suites passed
+Проверки пройдены: tests=54, errors=0, failures=0.
 ```
 
 Покрыты:
@@ -51,10 +53,13 @@ ok - modern icon generator fails clearly when actool is unavailable
 - строгий parser 365/366 кодов `0/1/2/8`;
 - HTTPS endpoint, query, timeout и HTTP errors;
 - memory/disk/stale cache;
-- 24-часовой throttle неуспешного refresh;
-- повторное принятие будущего года после появления данных;
+- 24-часовой throttle неуспешного refresh с кешем и без кеша;
+- повторное обновление текущего и будущего года в долгоживущем приложении;
+- fresh disk cache не сдвигает время следующего сетевого refresh;
+- завершённые прошлые годы не запрашиваются повторно;
 - in-flight дедупликация;
-- Saturday/Sunday fallback.
+- Saturday/Sunday fallback;
+- compact header layout для длинных EN/RU названий месяца.
 
 Сборка:
 
@@ -98,7 +103,7 @@ a3a0dc412a49b6b670e579f0f68cfd319b187db60108b2393bf0ca5c349af1b9
 Installed executable и `dist` имеют одинаковый SHA-256:
 
 ```text
-81cecdb901e30020f50bfa3c14ac4f52bed02863ab4a6236a7371c5589c3be67
+7361e68b5277834fda37d0677957b4328378d548fa27bae2b25e3308d70d1c3c
 ```
 
 Проверка установленного bundle:
@@ -107,7 +112,7 @@ Installed executable и `dist` имеют одинаковый SHA-256:
 /Applications/QuickCal.app/Contents/MacOS/QuickCal: Mach-O 64-bit executable arm64
 /Applications/QuickCal.app: valid on disk
 /Applications/QuickCal.app: satisfies its Designated Requirement
-30568 /Applications/QuickCal.app/Contents/MacOS/QuickCal
+37681 /Applications/QuickCal.app/Contents/MacOS/QuickCal
 ```
 
 Последняя строка — единственный запущенный process финального bundle.
@@ -150,6 +155,7 @@ System Events, native AX и `screencapture` только заданной обл
 | Finder icon | `CFBundleIconName=AppIcon`, compiled `Assets.car` зарегистрирован в LaunchServices; resolved `NSWorkspace` evidence подтверждает modern QuickCal artwork без серой generic Tahoe-плитки |
 | Popover с номерами недель | 342×460 для июля 2026 |
 | Popover без номеров недель | 310×460; labels недель отсутствуют |
+| Длинный заголовок месяца | в compact width симметрично зарезервировано по 64 pt под controls; `September 2026` и `сентябрь 2026` не пересекаются с Today/Next |
 | Системный язык | `AppleLanguages = [en-US, ru-RU]`; обычный запуск показывает английский UI |
 | Русский runtime | временный запуск с `-AppleLanguages (ru-RU)` показывает русский UI |
 | Верхняя дата EN | `Wednesday, 29 July, 2026` |
