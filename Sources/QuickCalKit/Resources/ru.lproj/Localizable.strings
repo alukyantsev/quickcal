@@ -6,7 +6,9 @@
 "calendar.accessibility.day_off" = "Выходной";
 "calendar.week_number_format" = "Неделя %d";
 "settings.show_week_numbers" = "Показывать номера недель";
+"settings.week_numbers_short" = "Недели";
 "settings.launch_at_login" = "Запускать при входе";
+"settings.launch_at_login_short" = "Автозапуск";
 "settings.next_theme" = "Следующая тема";
 "app.quit" = "Выйти из QuickCal";
 "launch.requires_approval" = "Разрешите QuickCal в Системных настройках → Основные → Объекты входа.";

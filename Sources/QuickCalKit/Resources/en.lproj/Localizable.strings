@@ -6,7 +6,9 @@
 "calendar.accessibility.day_off" = "Day off";
 "calendar.week_number_format" = "Week %d";
 "settings.show_week_numbers" = "Show week numbers";
+"settings.week_numbers_short" = "Weeks";
 "settings.launch_at_login" = "Launch at login";
+"settings.launch_at_login_short" = "Autostart";
 "settings.next_theme" = "Next theme";
 "app.quit" = "Quit QuickCal";
 "launch.requires_approval" = "Allow QuickCal in System Settings → General → Login Items.";
