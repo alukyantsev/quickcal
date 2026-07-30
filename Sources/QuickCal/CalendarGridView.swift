@@ -10,6 +10,8 @@ struct CalendarGridView: View {
     let localization: QuickCalLocalization
     let onToggleDate: (CalendarDate) -> Void
 
+    @Environment(\.quickCalThemeStyle) private var themeStyle
+
     private let cellWidth: CGFloat = 34
     private let rowSpacing: CGFloat = 3
 
@@ -19,7 +21,7 @@ struct CalendarGridView: View {
                 ForEach(Array(month.weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol)
                         .font(.callout.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(themeStyle.secondaryText)
                         .frame(width: cellWidth)
                 }
                 if showWeekNumbers {
@@ -69,7 +71,9 @@ struct CalendarGridView: View {
                     if showWeekNumbers {
                         Text(week.weekOfYear, format: .number)
                             .font(.callout.weight(.semibold))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(
+                                themeStyle.secondaryText.opacity(0.62)
+                            )
                             .frame(width: 28)
                             .accessibilityLabel(
                                 Text(verbatim: localization.format(

@@ -13,6 +13,7 @@ struct CalendarDayCell: View {
     let onToggle: (CalendarDate) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.quickCalThemeStyle) private var themeStyle
     @State private var isHovered = false
 
     private let cellSize: CGFloat = 34
@@ -37,18 +38,27 @@ struct CalendarDayCell: View {
                 selectionBackground
 
                 if isHovered && !isSelected && !isToday {
-                    Circle()
-                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(
+                        cornerRadius: themeStyle.dayCornerRadius,
+                        style: .continuous
+                    )
+                        .fill(themeStyle.hoverColor)
                         .frame(width: indicatorSize, height: indicatorSize)
                 }
 
                 if isToday {
-                    Circle()
-                        .fill(Color.accentColor)
+                    RoundedRectangle(
+                        cornerRadius: themeStyle.dayCornerRadius,
+                        style: .continuous
+                    )
+                        .fill(themeStyle.todayColor)
                         .frame(width: indicatorSize, height: indicatorSize)
 
                     if isHovered {
-                        Circle()
+                        RoundedRectangle(
+                            cornerRadius: themeStyle.dayCornerRadius,
+                            style: .continuous
+                        )
                             .fill(Color.white.opacity(0.10))
                             .frame(width: indicatorSize, height: indicatorSize)
                     }
@@ -77,15 +87,23 @@ struct CalendarDayCell: View {
     private var selectionBackground: some View {
         if selectionSegment != .none {
             UnevenRoundedRectangle(
-                topLeadingRadius: connectsLeading ? 0 : indicatorSize / 2,
-                bottomLeadingRadius: connectsLeading ? 0 : indicatorSize / 2,
-                bottomTrailingRadius: connectsTrailing ? 0 : indicatorSize / 2,
-                topTrailingRadius: connectsTrailing ? 0 : indicatorSize / 2,
+                topLeadingRadius: connectsLeading
+                    ? 0
+                    : themeStyle.dayCornerRadius,
+                bottomLeadingRadius: connectsLeading
+                    ? 0
+                    : themeStyle.dayCornerRadius,
+                bottomTrailingRadius: connectsTrailing
+                    ? 0
+                    : themeStyle.dayCornerRadius,
+                topTrailingRadius: connectsTrailing
+                    ? 0
+                    : themeStyle.dayCornerRadius,
                 style: .continuous
             )
             .fill(
-                Color(nsColor: .systemGreen)
-                    .opacity(isHovered ? 0.34 : 0.26)
+                themeStyle.selectionColor
+                    .opacity(isHovered ? 1 : 0.88)
             )
             .frame(
                 width: cellSize
@@ -112,15 +130,18 @@ struct CalendarDayCell: View {
 
     private var dayTextColor: Color {
         if isToday {
-            return .white
+            return themeStyle.todayText
+        }
+        if isSelected {
+            return themeStyle.selectedText
         }
         if isNonWorking {
-            return Color(nsColor: .systemRed)
+            return themeStyle.weekendColor
                 .opacity(day.isInDisplayedMonth ? 1 : 0.55)
         }
         return day.isInDisplayedMonth
-            ? .primary
-            : .secondary.opacity(0.65)
+            ? themeStyle.primaryText
+            : themeStyle.secondaryText.opacity(0.65)
     }
 
     private var accessibilityLabel: String {

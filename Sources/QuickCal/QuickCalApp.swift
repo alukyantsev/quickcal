@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import QuickCalKit
 
 @main
 struct QuickCalApp: App {
@@ -21,12 +22,30 @@ enum PopoverAppearanceSynchronizer {
     ) {
         popover.appearance = appearance
     }
+
+    static func apply(
+        theme: QuickCalTheme,
+        to popover: NSPopover
+    ) {
+        let name: NSAppearance.Name = theme.isDark
+            ? .darkAqua
+            : .aqua
+        guard let appearance = NSAppearance(named: name) else {
+            return
+        }
+        apply(appearance, to: popover)
+    }
+
+    static func isDark(_ appearance: NSAppearance) -> Bool {
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    }
 }
 
 @MainActor
 final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
+    private let themeStore = QuickCalThemeStore()
 
     func applicationDidFinishLaunching(
         _ notification: Notification
@@ -57,7 +76,18 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
         button.setAccessibilityLabel("QuickCal")
 
         let contentController = NSHostingController(
-            rootView: CalendarPopoverView()
+            rootView: CalendarPopoverView(
+                themeStore: themeStore,
+                onThemeChanged: { [weak self] theme in
+                    guard let self else {
+                        return
+                    }
+                    PopoverAppearanceSynchronizer.apply(
+                        theme: theme,
+                        to: self.popover
+                    )
+                }
+            )
         )
         contentController.sizingOptions = [.preferredContentSize]
 
@@ -77,8 +107,14 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
             popover.performClose(button)
         } else {
             let application = NSApplication.shared
+            let systemAppearance = application.effectiveAppearance
+            let theme = themeStore.resolvedTheme(
+                systemIsDark: PopoverAppearanceSynchronizer.isDark(
+                    systemAppearance
+                )
+            )
             PopoverAppearanceSynchronizer.apply(
-                application.effectiveAppearance,
+                theme: theme,
                 to: popover
             )
             popover.show(

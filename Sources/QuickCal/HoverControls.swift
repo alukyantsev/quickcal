@@ -8,6 +8,7 @@ struct HoverIconButton: View {
     let action: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.quickCalThemeStyle) private var themeStyle
     @State private var isHovered = false
 
     init(
@@ -32,9 +33,13 @@ struct HoverIconButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .foregroundStyle(themeStyle.secondaryText)
         .background {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(isHovered ? Color.primary.opacity(0.08) : .clear)
+            RoundedRectangle(
+                cornerRadius: themeStyle.controlCornerRadius,
+                style: .continuous
+            )
+            .fill(isHovered ? themeStyle.hoverColor : .clear)
         }
         .scaleEffect(isHovered && !reduceMotion ? 1.05 : 1)
         .onHover { isHovered = $0 }
@@ -49,23 +54,35 @@ struct HoverIconButton: View {
 
 struct HoverSurface<Content: View>: View {
     private let content: Content
+    private let horizontalPadding: CGFloat
+    private let verticalPadding: CGFloat
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.quickCalThemeStyle) private var themeStyle
     @State private var isHovered = false
 
-    init(@ViewBuilder content: () -> Content) {
+    init(
+        horizontalPadding: CGFloat = 6,
+        verticalPadding: CGFloat = 5,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.horizontalPadding = horizontalPadding
+        self.verticalPadding = verticalPadding
         self.content = content()
     }
 
     var body: some View {
         content
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 5)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
             .contentShape(Rectangle())
             .background {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(isHovered ? Color.primary.opacity(0.08) : .clear)
+                RoundedRectangle(
+                    cornerRadius: themeStyle.controlCornerRadius,
+                    style: .continuous
+                )
+                .fill(isHovered ? themeStyle.hoverColor : .clear)
             }
             .onHover { isHovered = $0 }
             .animation(
@@ -80,6 +97,7 @@ struct HoverActionButton: View {
     let action: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.quickCalThemeStyle) private var themeStyle
     @State private var isHovered = false
 
     var body: some View {
@@ -91,9 +109,13 @@ struct HoverActionButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .foregroundStyle(themeStyle.secondaryText)
         .background {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(isHovered ? Color.primary.opacity(0.08) : .clear)
+            RoundedRectangle(
+                cornerRadius: themeStyle.controlCornerRadius,
+                style: .continuous
+            )
+            .fill(isHovered ? themeStyle.hoverColor : .clear)
         }
         .scaleEffect(isHovered && !reduceMotion ? 1.01 : 1)
         .onHover { isHovered = $0 }
@@ -101,5 +123,67 @@ struct HoverActionButton: View {
             .easeOut(duration: reduceMotion ? 0 : 0.12),
             value: isHovered
         )
+    }
+}
+
+struct HoverTextButton: View {
+    let title: String
+    let help: String
+    let action: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.quickCalThemeStyle) private var themeStyle
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(verbatim: title)
+                .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+                .padding(.horizontal, 8)
+                .frame(height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(themeStyle.secondaryText)
+        .background {
+            RoundedRectangle(
+                cornerRadius: themeStyle.controlCornerRadius,
+                style: .continuous
+            )
+            .fill(isHovered ? themeStyle.hoverColor : .clear)
+        }
+        .scaleEffect(isHovered && !reduceMotion ? 1.03 : 1)
+        .onHover { isHovered = $0 }
+        .animation(
+            .easeOut(duration: reduceMotion ? 0 : 0.12),
+            value: isHovered
+        )
+        .help(Text(verbatim: help))
+        .accessibilityLabel(Text(verbatim: help))
+    }
+}
+
+struct CompactCheckboxToggleStyle: ToggleStyle {
+    @Environment(\.quickCalThemeStyle) private var themeStyle
+
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: configuration.isOn
+                    ? "checkmark.square.fill"
+                    : "square"
+                )
+                .font(.system(size: 13, weight: .semibold))
+                .frame(width: 15, height: 15)
+
+                configuration.label
+            }
+            .foregroundStyle(themeStyle.secondaryText)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
