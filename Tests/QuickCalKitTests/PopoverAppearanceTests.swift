@@ -20,4 +20,32 @@ struct PopoverAppearanceTests {
         #expect(popover.appearance?.name == .darkAqua)
         #expect(popover.effectiveAppearance.name == .darkAqua)
     }
+
+    @MainActor
+    @Test
+    func darkThemeUsesDarkPopoverAppearance() {
+        let popover = NSPopover()
+
+        PopoverAppearanceSynchronizer.apply(
+            theme: .colorDark,
+            to: popover
+        )
+
+        #expect(popover.appearance?.name == .darkAqua)
+        #expect(popover.effectiveAppearance.name == .darkAqua)
+    }
+
+    @MainActor
+    @Test
+    func lightThemeUsesLightPopoverAppearance() {
+        let popover = NSPopover()
+
+        PopoverAppearanceSynchronizer.apply(
+            theme: .swissLight,
+            to: popover
+        )
+
+        #expect(popover.appearance?.name == .aqua)
+        #expect(popover.effectiveAppearance.name == .aqua)
+    }
 }

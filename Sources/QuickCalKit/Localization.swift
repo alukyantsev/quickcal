@@ -11,6 +11,7 @@ public struct QuickCalLocalization: Sendable {
         case weekNumberFormat = "calendar.week_number_format"
         case showWeekNumbers = "settings.show_week_numbers"
         case launchAtLogin = "settings.launch_at_login"
+        case nextTheme = "settings.next_theme"
         case quitQuickCal = "app.quit"
         case launchRequiresApproval = "launch.requires_approval"
         case launchUnknownStatus = "launch.unknown_status"

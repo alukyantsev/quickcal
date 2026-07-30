@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import QuickCalKit
 
 @main
 struct QuickCalApp: App {
@@ -20,6 +21,19 @@ enum PopoverAppearanceSynchronizer {
         to popover: NSPopover
     ) {
         popover.appearance = appearance
+    }
+
+    static func apply(
+        theme: QuickCalTheme,
+        to popover: NSPopover
+    ) {
+        let name: NSAppearance.Name = theme.isDark
+            ? .darkAqua
+            : .aqua
+        guard let appearance = NSAppearance(named: name) else {
+            return
+        }
+        apply(appearance, to: popover)
     }
 }
 

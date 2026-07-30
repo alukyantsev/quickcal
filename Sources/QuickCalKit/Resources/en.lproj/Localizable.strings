@@ -7,6 +7,7 @@
 "calendar.week_number_format" = "Week %d";
 "settings.show_week_numbers" = "Show week numbers";
 "settings.launch_at_login" = "Launch at login";
+"settings.next_theme" = "Next theme";
 "app.quit" = "Quit QuickCal";
 "launch.requires_approval" = "Allow QuickCal in System Settings → General → Login Items.";
 "launch.unknown_status" = "Could not determine launch-at-login status.";
