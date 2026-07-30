@@ -200,3 +200,83 @@ unrelated desktop content.
 - Валидный cache производственного календаря сохранён для offline-работы.
 - Предыдущая установленная версия сохранена в
   `/Users/andrei.lukyantsev/Downloads/QuickCal-before-calendar-enhancements.app`.
+
+## Шесть тем оформления — 2026-07-30
+
+Проверена ветка `codex/quickcal-six-themes` в отдельном worktree. Рабочая
+версия `/Applications/QuickCal.app` не заменялась, состояние launch at login и
+пользовательская `.gitignore` в `main` не изменялись.
+
+### Автоматические проверки
+
+Канонический прогон:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./Scripts/test.sh
+```
+
+Результат:
+
+```text
+tests=63, errors=0, failures=0
+```
+
+Новые проверки подтверждают:
+
+- точный порядок шести тем и возврат `Color Dark → System Light`;
+- System Light/System Dark по appearance macOS без сохранённого выбора;
+- сохранение конкретной ручной темы в `quickCalTheme.v1`;
+- приоритет ручного выбора над дальнейшими изменениями appearance macOS;
+- fallback при неизвестном сохранённом raw value;
+- локализацию `Следующая тема` / `Next theme`, `Недели` / `Weeks` и
+  `Автозапуск` / `Autostart`;
+- `.aqua` для Light-тем и `.darkAqua` для Dark-тем;
+- создание непустого SwiftUI render для каждой из шести тем.
+
+### Production bundle
+
+Сборка:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./Scripts/build-app.sh
+```
+
+Фактический результат:
+
+```text
+dist/QuickCal.app/Contents/MacOS/QuickCal: Mach-O 64-bit executable arm64
+dist/QuickCal.app: valid on disk
+dist/QuickCal.app: satisfies its Designated Requirement
+```
+
+### Визуальная проверка SwiftUI
+
+Основной Computer Use backend не получает accessibility state для
+LSUIElement/menu-bar приложения и завершает запрос по timeout. Чтобы не
+устанавливать тестовую сборку поверх рабочей, визуальная проверка выполнена
+через `ImageRenderer` непосредственно над production-композицией
+`CalendarPopoverView`.
+
+Renderer прогнан для всех `QuickCalTheme.allCases`. На каждом изображении
+проверены:
+
+- одинаковая композиция календаря;
+- единственная видимая надпись `Today`;
+- компактный служебный футер;
+- SF Symbol `paintpalette`, не похожий на копирование;
+- читаемость Today, выходных и дней соседнего месяца;
+- самостоятельный Light/Dark характер System, Swiss Home и Color;
+- корректный SF Symbol checkbox без AppKit placeholder.
+
+Evidence:
+
+- [System Light](evidence/quickcal-six-themes-system-light.png)
+- [System Dark](evidence/quickcal-six-themes-system-dark.png)
+- [Swiss Home Light](evidence/quickcal-six-themes-swiss-light.png)
+- [Swiss Home Dark](evidence/quickcal-six-themes-swiss-dark.png)
+- [Color Light](evidence/quickcal-six-themes-color-light.png)
+- [Color Dark](evidence/quickcal-six-themes-color-dark.png)
+
+Полный ручной цикл и persistence подтверждены модельными тестами. Фактическая
+установка поверх `/Applications/QuickCal.app`, UI quit/relaunch и изменение
+боевых `UserDefaults` намеренно не выполнялись в этой ветке.
