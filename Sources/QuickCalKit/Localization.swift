@@ -34,6 +34,14 @@ public struct QuickCalLocalization: Sendable {
         case launchChangeFailedFormat = "launch.change_failed_format"
         case dateHeaderFormat = "date.header_format"
         case monthTitleFormat = "date.month_title_format"
+        case vacationFutureOne = "vacation.future.one"
+        case vacationFutureFew = "vacation.future.few"
+        case vacationFutureMany = "vacation.future.many"
+        case vacationRemainingOne = "vacation.remaining.one"
+        case vacationRemainingFew = "vacation.remaining.few"
+        case vacationRemainingMany = "vacation.remaining.many"
+        case vacationFinalDay = "vacation.final_day"
+        case vacationToday = "vacation.today"
     }
 
     public static var current: QuickCalLocalization {

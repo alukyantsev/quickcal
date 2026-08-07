@@ -30,3 +30,11 @@
 "launch.change_failed_format" = "Could not change launch at login: %@";
 "date.header_format" = "%1$@, %2$@";
 "date.month_title_format" = "%1$@ %2$@";
+"vacation.future.one" = "Vacation in %d day · %@";
+"vacation.future.few" = "Vacation in %d days · %@";
+"vacation.future.many" = "Vacation in %d days · %@";
+"vacation.remaining.one" = "Vacation: %d day remaining · until %@";
+"vacation.remaining.few" = "Vacation: %d days remaining · until %@";
+"vacation.remaining.many" = "Vacation: %d days remaining · until %@";
+"vacation.final_day" = "Last day of vacation · until %@";
+"vacation.today" = "Vacation today · %@";

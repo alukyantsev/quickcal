@@ -112,6 +112,23 @@ struct CalendarPopoverView: View {
                 .task(id: month.start) {
                     await workCalendar.load(month: month)
                 }
+
+                if let vacation = VacationCountdown.currentOrUpcoming(
+                    from: selectedDates.selectedDates,
+                    now: today,
+                    timeZone: month.calendar.timeZone
+                ) {
+                    Text(verbatim: VacationPresentation.string(
+                        for: vacation,
+                        timeZone: month.calendar.timeZone,
+                        localization: localization
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(themeStyle.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 3)
+                }
             } else {
                 HoverActionButton(
                     title: localization.string(.returnToToday),

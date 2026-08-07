@@ -30,3 +30,11 @@
 "launch.change_failed_format" = "Не удалось изменить автозапуск: %@";
 "date.header_format" = "%1$@ %2$@";
 "date.month_title_format" = "%1$@ %2$@";
+"vacation.future.one" = "Отпуск через %d день · %@";
+"vacation.future.few" = "Отпуск через %d дня · %@";
+"vacation.future.many" = "Отпуск через %d дней · %@";
+"vacation.remaining.one" = "Отпуск: остался %d день · до %@";
+"vacation.remaining.few" = "Отпуск: осталось %d дня · до %@";
+"vacation.remaining.many" = "Отпуск: осталось %d дней · до %@";
+"vacation.final_day" = "Последний день отпуска · до %@";
+"vacation.today" = "Отпуск сегодня · %@";
