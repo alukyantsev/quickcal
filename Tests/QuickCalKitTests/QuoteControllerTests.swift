@@ -125,7 +125,8 @@ struct QuoteControllerTests {
         let coordinator = ForegroundRefreshCoordinator(
             weatherController: weatherController,
             quoteController: quoteController,
-            timer: timer
+            timer: timer,
+            now: { Date(timeIntervalSince1970: 1_767_225_600) }
         )
 
         coordinator.start()
@@ -135,6 +136,7 @@ struct QuoteControllerTests {
 
         #expect(await forecastProvider.requestCount() == 1)
         #expect(await quoteProvider.requestedTickers() == MarketQuoteSettings.defaultTickers)
+        #expect(coordinator.lastCompletedRefreshAt == Date(timeIntervalSince1970: 1_767_225_600))
     }
 
     @Test(arguments: QuickCalTheme.allCases)
@@ -214,6 +216,37 @@ struct QuoteControllerTests {
         }
         #expect(snapshot.quotes.map(\.ticker) == ["SBER"])
         #expect(failedTickers == ["SBER"])
+    }
+
+    @Test
+    func cacheFallbackOnlyShowsQuotesStillPresentInTheCurrentWatchlist() async {
+        let fixture = defaultsFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let now = Date(timeIntervalSince1970: 1_767_225_600)
+        let cache = MarketQuoteCacheStore(userDefaults: fixture.defaults, key: "cache")
+        cache.save(MarketQuoteCacheEntry(
+            snapshot: MarketQuoteSnapshot(quotes: [
+                MarketQuote(ticker: "SBER", displayName: "SBER", price: 312.4, change: 2.1, changePercent: 0.68, dataDate: now),
+                MarketQuote(ticker: "IMOEX", displayName: "IMOEX", price: 2_700, change: 10, changePercent: 0.37, dataDate: now),
+            ]),
+            fetchedAt: now
+        ))
+        let settings = MarketQuoteSettingsStore(userDefaults: fixture.defaults, key: "settings")
+        settings.update(MarketQuoteSettings(isVisible: true, tickers: ["IMOEX"]))
+        let controller = QuoteController(
+            settingsStore: settings,
+            cacheStore: cache,
+            provider: QuoteProvider(unavailableTickers: ["IMOEX"]),
+            now: { now }
+        )
+
+        await controller.refreshNow()
+
+        guard case .stale(let snapshot, _, _) = controller.state else {
+            Issue.record("Expected filtered stale cache state")
+            return
+        }
+        #expect(snapshot.quotes.map(\.ticker) == ["IMOEX"])
     }
 
     @Test

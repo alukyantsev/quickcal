@@ -154,8 +154,17 @@ final class QuoteController: ObservableObject {
             state = .error(failedTickers: failedTickers)
             return
         }
+        let quotesByTicker = Dictionary(
+            entry.snapshot.quotes.map { ($0.ticker, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let matchingQuotes = settings.tickers.compactMap { quotesByTicker[$0] }
+        guard !matchingQuotes.isEmpty else {
+            state = .error(failedTickers: failedTickers)
+            return
+        }
         state = .stale(
-            entry.snapshot,
+            MarketQuoteSnapshot(quotes: matchingQuotes),
             fetchedAt: entry.fetchedAt,
             failedTickers: failedTickers
         )
@@ -163,21 +172,27 @@ final class QuoteController: ObservableObject {
 }
 
 @MainActor
-final class ForegroundRefreshCoordinator {
+final class ForegroundRefreshCoordinator: ObservableObject {
     static let interval: TimeInterval = 30 * 60
 
     private let weatherController: WeatherController
     private let quoteController: QuoteController
     private let timer: any ForegroundRefreshScheduling
+    private let now: @Sendable () -> Date
+    private var refreshTask: Task<Void, Never>?
+
+    @Published private(set) var lastCompletedRefreshAt: Date?
 
     init(
         weatherController: WeatherController,
         quoteController: QuoteController,
-        timer: any ForegroundRefreshScheduling = RunLoopForegroundRefreshTimer()
+        timer: any ForegroundRefreshScheduling = RunLoopForegroundRefreshTimer(),
+        now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.weatherController = weatherController
         self.quoteController = quoteController
         self.timer = timer
+        self.now = now
     }
 
     func start() {
@@ -191,13 +206,26 @@ final class ForegroundRefreshCoordinator {
     }
 
     func refresh() {
-        weatherController.refresh()
-        quoteController.refresh()
+        guard refreshTask == nil else { return }
+        refreshTask = Task { [weak self] in
+            guard let self else { return }
+            defer { self.refreshTask = nil }
+            await self.performRefresh()
+        }
     }
 
     func refreshNow() async {
+        if let refreshTask {
+            await refreshTask.value
+            return
+        }
+        await performRefresh()
+    }
+
+    private func performRefresh() async {
         async let weather: Void = weatherController.refreshNow()
         async let quotes: Void = quoteController.refreshNow()
         _ = await (weather, quotes)
+        lastCompletedRefreshAt = now()
     }
 }

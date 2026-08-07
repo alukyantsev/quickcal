@@ -133,6 +133,50 @@ struct MOEXISSMarketQuoteProviderTests {
         #expect(requests[1].url?.path == "/iss/engines/futures/markets/forts/securities/EuU6.json")
     }
 
+    @Test(arguments: [
+        ("TRADEDATE", "2026-08-07"),
+        ("TRADE_SESSION_DATE", "2026-08-06"),
+        ("SYSTIME", "2026-08-05 19:15:00"),
+    ])
+    func usesOnlyMarketdataSessionFieldsForTheQuoteDate(
+        dateColumn: String,
+        value: String
+    ) async throws {
+        let response = HTTPDataResponse(data: Data("""
+        {"marketdata":{"columns":["SECID","LAST","PREVPRICE","\(dateColumn)"],"data":[["SBER",100,99,"\(value)"]]},"securities":{"columns":["SECID","LASTTRADEDATE"],"data":[["SBER","2030-01-01"]]}}
+        """.utf8), statusCode: 200)
+        let recorder = RequestRecorder(responses: [response])
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { Date(timeIntervalSince1970: 0) }
+        )
+
+        let quote = try await provider.quote(for: "SBER")
+
+        let expectedDate = try date(String(value.prefix(10)))
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        #expect(quote.dataDate.map(utcCalendar.startOfDay(for:)) == expectedDate)
+        let requests = await recorder.requests
+        let url = try #require(requests.first?.url)
+        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
+        #expect(query?.first(where: { $0.name == "iss.only" })?.value == "marketdata")
+        #expect(query?.contains(where: { $0.name == "securities.columns" }) == false)
+    }
+
+    @Test
+    func leavesTheQuoteDateUnavailableWhenMarketdataHasNoSessionDate() async throws {
+        let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
+        {"marketdata":{"columns":["SECID","LAST","PREVPRICE"],"data":[["SBER",100,99]]},"securities":{"columns":["SECID","LASTTRADEDATE"],"data":[["SBER","2030-01-01"]]}}
+        """.utf8), statusCode: 200)])
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { Date(timeIntervalSince1970: 0) }
+        )
+
+        #expect(try await provider.quote(for: "SBER").dataDate == nil)
+    }
+
     @Test
     func reportsUnknownAndInsecureSourcesWithoutReturningAQuote() async throws {
         let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { _ in
@@ -150,7 +194,7 @@ struct MOEXISSMarketQuoteProviderTests {
         secid: String, shortName: String, last: Double, previous: Double, date: String
     ) -> HTTPDataResponse {
         HTTPDataResponse(data: Data("""
-        {"marketdata":{"columns":["SECID","LAST","PREVPRICE"],"data":[["\(secid)",\(last),\(previous)]]},"securities":{"columns":["SECID","SHORTNAME","LASTTRADEDATE"],"data":[["\(secid)","\(shortName)","\(date)"]]}}
+        {"marketdata":{"columns":["SECID","LAST","PREVPRICE","TRADEDATE"],"data":[["\(secid)",\(last),\(previous),"\(date)"]]}}
         """.utf8), statusCode: 200)
     }
 

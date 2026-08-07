@@ -33,9 +33,6 @@ final class RunLoopForegroundRefreshTimer: ForegroundRefreshScheduling {
     }
 }
 
-typealias WeatherRefreshScheduling = ForegroundRefreshScheduling
-typealias RunLoopWeatherRefreshTimer = RunLoopForegroundRefreshTimer
-
 @MainActor
 enum WeatherPresentationState: Equatable {
     case noLocation
@@ -60,7 +57,6 @@ enum AutomaticLocationStatus: Equatable {
 
 @MainActor
 final class WeatherController: ObservableObject {
-    static let foregroundRefreshInterval: TimeInterval = 30 * 60
     static let freshCacheLifetime: TimeInterval = 30 * 60
     static let staleCacheLifetime: TimeInterval = 24 * 60 * 60
 
@@ -89,7 +85,6 @@ final class WeatherController: ObservableObject {
     private let cacheStore: WeatherForecastCacheStore
     private let provider: any WeatherForecastProviding
     private let locationService: any WeatherLocationServicing
-    private let timer: any WeatherRefreshScheduling
     private let now: @Sendable () -> Date
     private var refreshTask: Task<Void, Never>?
 
@@ -98,14 +93,12 @@ final class WeatherController: ObservableObject {
         cacheStore: WeatherForecastCacheStore = WeatherForecastCacheStore(),
         provider: any WeatherForecastProviding,
         locationService: any WeatherLocationServicing,
-        timer: any WeatherRefreshScheduling = RunLoopWeatherRefreshTimer(),
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.settingsStore = settingsStore
         self.cacheStore = cacheStore
         self.provider = provider
         self.locationService = locationService
-        self.timer = timer
         self.now = now
         settings = settingsStore.settings
         state = .noLocation
@@ -117,16 +110,6 @@ final class WeatherController: ObservableObject {
 
     deinit {
         refreshTask?.cancel()
-    }
-
-    func startForegroundRefresh() {
-        timer.schedule(every: Self.foregroundRefreshInterval) { [weak self] in
-            self?.refreshFromForegroundTimer()
-        }
-    }
-
-    func stopForegroundRefresh() {
-        timer.invalidate()
     }
 
     func setManualLocation(_ location: WeatherLocation?) {
@@ -210,10 +193,6 @@ final class WeatherController: ObservableObject {
             automaticLocationStatus = .unavailable
             refreshFallbackForecast()
         }
-    }
-
-    private func refreshFromForegroundTimer() {
-        refresh()
     }
 
     private func requestAutomaticLocationIfAuthorized() {

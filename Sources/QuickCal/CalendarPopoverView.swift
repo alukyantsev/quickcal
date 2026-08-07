@@ -360,18 +360,21 @@ struct CalendarPopoverView: View {
     private let onThemeChanged: (QuickCalTheme) -> Void
     private let weatherController: WeatherController?
     private let quoteController: QuoteController?
+    private let refreshCoordinator: ForegroundRefreshCoordinator?
     private let onRefresh: (() -> Void)?
 
     init(
         themeStore: QuickCalThemeStore,
         weatherController: WeatherController? = nil,
         quoteController: QuoteController? = nil,
+        refreshCoordinator: ForegroundRefreshCoordinator? = nil,
         onRefresh: (() -> Void)? = nil,
         onThemeChanged: @escaping (QuickCalTheme) -> Void
     ) {
         _themeStore = ObservedObject(wrappedValue: themeStore)
         self.weatherController = weatherController
         self.quoteController = quoteController
+        self.refreshCoordinator = refreshCoordinator
         self.onRefresh = onRefresh
         self.onThemeChanged = onThemeChanged
     }
@@ -523,10 +526,11 @@ struct CalendarPopoverView: View {
     private var calendarHeader: some View {
         VStack(alignment: .leading, spacing: 3) {
             monthNavigation
-            if let weatherController, let quoteController {
+            if let weatherController, let quoteController, let refreshCoordinator {
                 NetworkHeaderContextView(
                     weatherController: weatherController,
-                    quoteController: quoteController
+                    quoteController: quoteController,
+                    refreshCoordinator: refreshCoordinator
                 ) {
                     headerUtilities
                 }
@@ -1087,6 +1091,7 @@ private struct WeatherHeaderUtilityPlacement<Controls: View>: View {
 private struct NetworkHeaderContextView<Controls: View>: View {
     @ObservedObject var weatherController: WeatherController
     @ObservedObject var quoteController: QuoteController
+    @ObservedObject var refreshCoordinator: ForegroundRefreshCoordinator
     let controls: () -> Controls
 
     @Environment(\.quickCalThemeStyle) private var themeStyle
@@ -1116,7 +1121,7 @@ private struct NetworkHeaderContextView<Controls: View>: View {
                         .lineLimit(1)
                 }
 
-                if let fetchedAt = latestFetchedAt {
+                if let fetchedAt = refreshCoordinator.lastCompletedRefreshAt {
                     separator
                     Text(verbatim: localization.format(
                         .weatherUpdatedFormat,
@@ -1137,12 +1142,6 @@ private struct NetworkHeaderContextView<Controls: View>: View {
             .padding(.horizontal, 2)
             .accessibilityElement(children: .combine)
         }
-    }
-
-    private var latestFetchedAt: Date? {
-        [weatherController.lastForecastFetchedAt, quoteController.lastFetchedAt]
-            .compactMap { $0 }
-            .max()
     }
 
     private var separator: some View {

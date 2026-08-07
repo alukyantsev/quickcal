@@ -91,6 +91,7 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
                 themeStore: themeStore,
                 weatherController: weatherController,
                 quoteController: quoteController,
+                refreshCoordinator: refreshCoordinator,
                 onRefresh: { [weak self] in self?.refreshCoordinator.refresh() },
                 onThemeChanged: { [weak self] theme in
                     guard let self else {

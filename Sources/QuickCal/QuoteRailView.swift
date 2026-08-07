@@ -42,7 +42,9 @@ struct QuoteRailView: View {
             ForEach(quotes, id: \.ticker) { quote in
                 quoteRow(quote)
             }
-            if let dataDate = quotes.map(\.dataDate).max() {
+            if quotes.allSatisfy({ $0.dataDate != nil }),
+               let dataDate = quotes.compactMap(\.dataDate).max()
+            {
                 Text(verbatim: localization.format(.marketDataAsOfFormat, dataDateString(dataDate)))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(themeStyle.secondaryText)
@@ -53,6 +55,14 @@ struct QuoteRailView: View {
                         .marketDataDateAccessibilityFormat,
                         dataDateString(dataDate)
                     )))
+            } else {
+                Text(verbatim: localization.string(.marketDataDateUnavailable))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(themeStyle.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 2)
+                    .padding(.top, 2)
+                    .accessibilityLabel(Text(verbatim: localization.string(.marketDataDateUnavailable)))
             }
         }
         .padding(.top, themeStyle.usesWeekRules ? 5 : 3)
@@ -93,7 +103,7 @@ struct QuoteRailView: View {
             directionAccessibility,
             String(format: "%.2f", locale: localization.locale, quote.change),
             change,
-            dataDateString(quote.dataDate)
+            quote.dataDate.map(dataDateString) ?? localization.string(.marketDataDateUnavailable)
         )))
     }
 

@@ -75,6 +75,7 @@
 "market.error_accessibility" = "MOEX quotes are unavailable.";
 "market.data_as_of_format" = "Data as of %@";
 "market.data_date_accessibility_format" = "Market data date: %@";
+"market.data_date_unavailable" = "Market data date is unavailable";
 "market.quote_accessibility_format" = "%1$@, %2$@, %3$@ change %4$@ (%5$@), data date %6$@";
 "market.direction_up" = "up";
 "market.direction_down" = "down";

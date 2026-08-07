@@ -246,25 +246,6 @@ struct WeatherControllerTests {
         }
     }
 
-    private final class RefreshTimer: WeatherRefreshScheduling {
-        private(set) var interval: TimeInterval?
-        private var action: (@MainActor () -> Void)?
-
-        func schedule(every interval: TimeInterval, action: @escaping @MainActor () -> Void) {
-            self.interval = interval
-            self.action = action
-        }
-
-        func invalidate() {
-            interval = nil
-            action = nil
-        }
-
-        func fire() {
-            action?()
-        }
-    }
-
     private final class TestClock: @unchecked Sendable {
         var value: Date
 
@@ -348,30 +329,6 @@ struct WeatherControllerTests {
         #expect(controller.settings.locationMode == .manual)
         #expect(controller.settings.resolvedLocation == automatic)
         #expect(controller.settings.manualLocation == automatic)
-    }
-
-    @Test
-    func foregroundTimerRefreshesAutomaticLocationAndForecastEveryThirtyMinutes() async {
-        let automatic = fixtureLocation()
-        let forecast = fixtureForecast(location: automatic)
-        let service = LocationService(
-            authorizationStatus: .authorized,
-            locationResult: .success(automatic)
-        )
-        let provider = ForecastProvider(responses: [.success(forecast)])
-        let timer = RefreshTimer()
-        let controller = makeController(provider: provider, locationService: service, timer: timer)
-
-        controller.setAutomaticModeEnabled(true)
-        await controller.refreshNow()
-        controller.startForegroundRefresh()
-        timer.fire()
-        await Task.yield()
-        await Task.yield()
-
-        #expect(timer.interval == WeatherController.foregroundRefreshInterval)
-        #expect(service.locationRequestCount == 2)
-        #expect(await provider.requestCount() == 2)
     }
 
     @Test
@@ -479,7 +436,6 @@ struct WeatherControllerTests {
         cacheStore: WeatherForecastCacheStore? = nil,
         provider: ForecastProvider = ForecastProvider(responses: []),
         locationService: LocationService,
-        timer: RefreshTimer = RefreshTimer(),
         now: @escaping @Sendable () -> Date = { Date() }
     ) -> WeatherController {
         let defaults = defaultsFixture().defaults
@@ -490,7 +446,6 @@ struct WeatherControllerTests {
             cacheStore: cacheStore ?? WeatherForecastCacheStore(userDefaults: defaults, key: UUID().uuidString),
             provider: provider,
             locationService: locationService,
-            timer: timer,
             now: now
         )
     }

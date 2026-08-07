@@ -79,6 +79,7 @@ public struct QuickCalLocalization: Sendable {
         case marketErrorAccessibility = "market.error_accessibility"
         case marketDataAsOfFormat = "market.data_as_of_format"
         case marketDataDateAccessibilityFormat = "market.data_date_accessibility_format"
+        case marketDataDateUnavailable = "market.data_date_unavailable"
         case marketQuoteAccessibilityFormat = "market.quote_accessibility_format"
         case marketDirectionUp = "market.direction_up"
         case marketDirectionDown = "market.direction_down"

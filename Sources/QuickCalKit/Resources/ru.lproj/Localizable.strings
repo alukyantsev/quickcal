@@ -75,6 +75,7 @@
 "market.error_accessibility" = "Котировки MOEX недоступны.";
 "market.data_as_of_format" = "Данные на %@";
 "market.data_date_accessibility_format" = "Дата рыночных данных: %@";
+"market.data_date_unavailable" = "Дата рыночных данных недоступна";
 "market.quote_accessibility_format" = "%1$@, %2$@, изменение %3$@ %4$@ (%5$@), дата данных %6$@";
 "market.direction_up" = "рост";
 "market.direction_down" = "снижение";

@@ -105,9 +105,11 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
             path: path,
             queryItems: [
                 URLQueryItem(name: "iss.meta", value: "off"),
-                URLQueryItem(name: "iss.only", value: "marketdata,securities"),
-                URLQueryItem(name: "marketdata.columns", value: "SECID,LAST,PREVPRICE,LASTTOPREVPRICE"),
-                URLQueryItem(name: "securities.columns", value: "SECID,SHORTNAME,LASTTRADEDATE"),
+                URLQueryItem(name: "iss.only", value: "marketdata"),
+                URLQueryItem(
+                    name: "marketdata.columns",
+                    value: "SECID,LAST,PREVPRICE,LASTTOPREVPRICE,TRADEDATE,TRADE_SESSION_DATE,SYSTIME"
+                ),
             ]
         )
         let marketData = try response.table(named: "marketdata")
@@ -120,9 +122,9 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
         let previous = values.double("PREVPRICE")
         let change = values.double("LASTTOPREVPRICE") ?? previous.map { price - $0 } ?? 0
         let percentage = previous.flatMap { $0 == 0 ? nil : (price - $0) / $0 * 100 } ?? 0
-        let dataDate = try response.table(named: "securities").rows
-            .first(where: { $0.string("SECID") == exchangeTicker })?
-            .date("LASTTRADEDATE") ?? now()
+        let dataDate = values.date("TRADEDATE")
+            ?? values.date("TRADE_SESSION_DATE")
+            ?? values.date("SYSTIME")
         return MarketQuote(
             ticker: requestedTicker,
             displayName: displayName,
@@ -195,16 +197,31 @@ private struct ISSRow {
 
     func date(_ column: String) -> Date? {
         guard let value = string(column) else { return nil }
+        let iso8601 = ISO8601DateFormatter()
+        if let date = iso8601.date(from: value) { return date }
+
         let parts = value.split(separator: "-", omittingEmptySubsequences: false)
-        guard
-            parts.count == 3,
-            let year = Int(parts[0]),
-            let month = Int(parts[1]),
-            let day = Int(parts[2])
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1].prefix(2)),
+              let day = Int(parts[2].prefix(2))
         else { return nil }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        return calendar.date(from: DateComponents(year: year, month: month, day: day))
+        guard let dayDate = calendar.date(from: DateComponents(year: year, month: month, day: day)) else {
+            return nil
+        }
+        guard let time = value.split(separator: " ", maxSplits: 1).dropFirst().first else {
+            return dayDate
+        }
+        let components = time.split(separator: ":").compactMap { Int($0) }
+        guard components.count >= 2 else { return dayDate }
+        return calendar.date(
+            bySettingHour: components[0],
+            minute: components[1],
+            second: components.count > 2 ? components[2] : 0,
+            of: dayDate
+        )
     }
 }
 

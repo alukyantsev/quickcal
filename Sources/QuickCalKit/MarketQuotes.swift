@@ -47,7 +47,9 @@ public struct MarketQuote: Codable, Sendable, Equatable {
     public let price: Double
     public let change: Double
     public let changePercent: Double
-    public let dataDate: Date
+    /// Дата, которую ISS отдала вместе с рыночным снимком. Может отсутствовать,
+    /// если в `marketdata` нет ни одного поля времени торговой сессии.
+    public let dataDate: Date?
 
     public init(
         ticker: String,
@@ -55,7 +57,7 @@ public struct MarketQuote: Codable, Sendable, Equatable {
         price: Double,
         change: Double,
         changePercent: Double,
-        dataDate: Date
+        dataDate: Date?
     ) {
         self.ticker = ticker
         self.displayName = displayName
