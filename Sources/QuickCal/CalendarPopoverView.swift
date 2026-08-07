@@ -420,10 +420,22 @@ struct CalendarPopoverView: View {
                 )
             }
         }
+        .overlay {
+            if activePanel != nil {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        activePanel = nil
+                    }
+            }
+        }
         .overlay(alignment: .topTrailing) {
             popupPanel
                 .padding(.top, 36)
                 .zIndex(10)
+        }
+        .onExitCommand {
+            activePanel = nil
         }
     }
 
