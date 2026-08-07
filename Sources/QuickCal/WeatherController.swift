@@ -44,7 +44,7 @@ enum WeatherPresentationState: Equatable {
 @MainActor
 struct WeatherHeaderContext: Equatable {
     let location: WeatherLocation
-    let fetchedAt: Date?
+    let fetchedAt: Date
 }
 
 @MainActor
@@ -65,12 +65,16 @@ final class WeatherController: ObservableObject {
     @Published private(set) var settings: WeatherSettings
     @Published private(set) var isRefreshing = false
     @Published private(set) var automaticLocationStatus: AutomaticLocationStatus = .inactive
+    @Published private(set) var lastForecastFetchedAt: Date?
 
     var headerContext: WeatherHeaderContext? {
         guard settings.isVisible else { return nil }
         switch state {
         case .fresh(let forecast):
-            return WeatherHeaderContext(location: forecast.location, fetchedAt: nil)
+            return WeatherHeaderContext(
+                location: forecast.location,
+                fetchedAt: lastForecastFetchedAt ?? now()
+            )
         case .stale(let forecast, let fetchedAt):
             return WeatherHeaderContext(location: forecast.location, fetchedAt: fetchedAt)
         case .noLocation, .unavailable:
@@ -262,7 +266,9 @@ final class WeatherController: ObservableObject {
 
         do {
             let forecast = try await provider.forecast(for: location)
-            cacheStore.save(WeatherForecastCacheEntry(forecast: forecast, fetchedAt: now()))
+            let fetchedAt = now()
+            cacheStore.save(WeatherForecastCacheEntry(forecast: forecast, fetchedAt: fetchedAt))
+            lastForecastFetchedAt = fetchedAt
             state = .fresh(forecast)
         } catch {
             updatePresentationFromCache()
@@ -277,6 +283,7 @@ final class WeatherController: ObservableObject {
 
     private func updatePresentationFromCache() {
         guard let location = settings.resolvedLocation else {
+            lastForecastFetchedAt = nil
             state = .noLocation
             return
         }
@@ -284,11 +291,13 @@ final class WeatherController: ObservableObject {
             let entry = cacheStore.load(),
             entry.forecast.location == location
         else {
+            lastForecastFetchedAt = nil
             state = .unavailable
             return
         }
 
         let age = max(0, now().timeIntervalSince(entry.fetchedAt))
+        lastForecastFetchedAt = entry.fetchedAt
         if age < Self.freshCacheLifetime {
             state = .fresh(entry.forecast)
         } else if age <= Self.staleCacheLifetime {

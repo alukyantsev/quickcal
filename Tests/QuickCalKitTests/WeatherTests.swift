@@ -423,16 +423,18 @@ struct WeatherControllerTests {
     func headerContextTracksWeatherVisibilityAndForecastLocation() async {
         let location = fixtureLocation(displayName: "Moscow")
         let forecast = fixtureForecast(location: location)
+        let fetchedAt = Date(timeIntervalSince1970: 1_767_225_600)
         let controller = makeController(
             settings: WeatherSettings(isVisible: true, manualLocation: location),
             provider: ForecastProvider(responses: [.success(forecast)]),
-            locationService: LocationService(locationResult: .success(location))
+            locationService: LocationService(locationResult: .success(location)),
+            now: { fetchedAt }
         )
 
         await controller.refreshNow()
         #expect(controller.headerContext == WeatherHeaderContext(
             location: location,
-            fetchedAt: nil
+            fetchedAt: fetchedAt
         ))
 
         controller.setVisibility(false)

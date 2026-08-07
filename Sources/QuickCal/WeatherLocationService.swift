@@ -24,6 +24,7 @@ protocol WeatherLocationServicing: AnyObject {
 final class CoreLocationWeatherService: NSObject, WeatherLocationServicing {
     enum ServiceError: Error, Equatable {
         case locationUnavailable
+        case locationRequestTimedOut
         case reverseGeocodingFailed
     }
 
@@ -35,6 +36,7 @@ final class CoreLocationWeatherService: NSObject, WeatherLocationServicing {
 
     private let manager: CLLocationManager
     private var locationContinuation: CheckedContinuation<CLLocation, Error>?
+    private var locationTimeoutTask: Task<Void, Never>?
 
     override init() {
         manager = CLLocationManager()
@@ -53,6 +55,12 @@ final class CoreLocationWeatherService: NSObject, WeatherLocationServicing {
         let location = try await withCheckedThrowingContinuation { continuation in
             locationContinuation = continuation
             manager.requestLocation()
+            locationTimeoutTask?.cancel()
+            locationTimeoutTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(10))
+                guard !Task.isCancelled else { return }
+                self?.resumeLocationRequest(with: .failure(ServiceError.locationRequestTimedOut))
+            }
         }
         let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
         guard let placemark = placemarks.first else {
@@ -120,6 +128,8 @@ extension CoreLocationWeatherService: CLLocationManagerDelegate {
 @MainActor
 private extension CoreLocationWeatherService {
     func resumeLocationRequest(with result: Result<CLLocation, Error>) {
+        locationTimeoutTask?.cancel()
+        locationTimeoutTask = nil
         let continuation = locationContinuation
         locationContinuation = nil
         continuation?.resume(with: result)

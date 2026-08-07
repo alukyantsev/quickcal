@@ -347,12 +347,7 @@ struct CalendarPopoverView: View {
 
     private func calendarSurface(today: Date) -> some View {
         VStack(spacing: themeStyle.usesWeekRules ? 7 : 9) {
-            VStack(alignment: .leading, spacing: 2) {
-                monthNavigation
-                if let weatherController {
-                    WeatherHeaderContextView(controller: weatherController)
-                }
-            }
+            calendarHeader
 
             if let month = CalendarMonth(
                 containing: displayedMonth,
@@ -407,7 +402,6 @@ struct CalendarPopoverView: View {
             }
         }
         .padding(themeStyle.calendarPadding)
-        .padding(.bottom, activePanel == .themes ? 42 : 0)
         .frame(maxWidth: .infinity)
         .background {
             RoundedRectangle(
@@ -430,6 +424,23 @@ struct CalendarPopoverView: View {
             popupPanel
                 .padding(.top, 36)
                 .zIndex(10)
+        }
+    }
+
+    private var calendarHeader: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            monthNavigation
+            if let weatherController {
+                WeatherHeaderContextView(controller: weatherController)
+            }
+        }
+        .padding(.bottom, themeStyle.usesWeekRules ? 0 : 4)
+        .overlay(alignment: .bottom) {
+            if !themeStyle.usesWeekRules {
+                Rectangle()
+                    .fill(themeStyle.dividerColor)
+                    .frame(height: 1)
+            }
         }
     }
 
@@ -459,12 +470,6 @@ struct CalendarPopoverView: View {
         }
         .frame(height: 32)
         .padding(.bottom, 2)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(themeStyle.dividerColor)
-                .frame(height: 1)
-                .offset(y: 5)
-        }
     }
 
     private var deadlineLedgerToolbar: some View {
@@ -519,12 +524,6 @@ struct CalendarPopoverView: View {
         }
         .frame(height: 34)
         .padding(.bottom, 2)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(themeStyle.dividerColor)
-                .frame(height: 1)
-                .offset(y: 5)
-        }
     }
 
     private var monthTitleView: some View {
@@ -822,7 +821,24 @@ struct CalendarPopoverView: View {
     }
 
     private var popupBackgroundColor: Color {
-        themeStyle.panelColor
+        switch theme {
+        case .systemLight: Color(rgb: 0xF7F8FA)
+        case .systemDark: Color(rgb: 0x303944)
+        case .swissLight: Color(rgb: 0xFBFAF6)
+        case .swissDark: Color(rgb: 0x2A1E24)
+        case .colorLight: Color(rgb: 0xFFFBFE)
+        case .colorDark: Color(rgb: 0x3D2446)
+        case .ledgerLight: Color(rgb: 0xF2EFE6)
+        case .ledgerDark: Color(rgb: 0x2B2119)
+        case .prismLight: Color(rgb: 0xF1FAFA)
+        case .prismDark: Color(rgb: 0x143C4C)
+        case .signalGridLight: Color(rgb: 0xF3F5F1)
+        case .signalGridDark: Color(rgb: 0x17382F)
+        case .titaniumChronoLight: Color(rgb: 0xF8F8F3)
+        case .titaniumChronoDark: Color(rgb: 0x2B3A43)
+        case .monochromeLight: Color(rgb: 0xFAFAF8)
+        case .monochromeDark: Color(rgb: 0x292632)
+        }
     }
 
     private var popupTextColor: Color {
@@ -888,14 +904,13 @@ private struct WeatherHeaderContextView: View {
                     .font(.system(size: 10, weight: .semibold))
                 Text(verbatim: context.location.displayName)
                     .lineLimit(1)
+                    .layoutPriority(1)
                 Spacer(minLength: 0)
-                if let fetchedAt = context.fetchedAt {
-                    Text(verbatim: localization.format(
-                        .weatherUpdatedFormat,
-                        Self.updatedString(fetchedAt)
-                    ))
-                    .lineLimit(1)
-                }
+                Text(verbatim: localization.format(
+                    .weatherUpdatedFormat,
+                    Self.updatedString(context.fetchedAt)
+                ))
+                .lineLimit(1)
             }
             .font(.system(
                 size: 10,
