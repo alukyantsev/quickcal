@@ -47,7 +47,7 @@ public struct WeatherSettings: Codable, Sendable, Equatable {
     public init(
         isVisible: Bool = true,
         locationMode: WeatherLocationMode = .manual,
-        interval: WeatherInterval = .twoHours,
+        interval: WeatherInterval = .fourHours,
         manualLocation: WeatherLocation? = nil,
         automaticLocation: WeatherLocation? = nil
     ) {

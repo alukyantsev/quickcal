@@ -126,6 +126,11 @@ struct OpenMeteoWeatherClientTests {
 @MainActor
 struct WeatherPersistenceTests {
     @Test
+    func defaultSettingsUseFourHourInterval() {
+        #expect(WeatherSettings().interval == .fourHours)
+    }
+
+    @Test
     func settingsPersistAllModesIntervalsAndLocationFallback() throws {
         let fixture = defaultsFixture()
         defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
