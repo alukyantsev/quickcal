@@ -42,6 +42,12 @@ enum WeatherPresentationState: Equatable {
 }
 
 @MainActor
+struct WeatherHeaderContext: Equatable {
+    let location: WeatherLocation
+    let fetchedAt: Date?
+}
+
+@MainActor
 enum AutomaticLocationStatus: Equatable {
     case inactive
     case awaitingAuthorization
@@ -59,6 +65,18 @@ final class WeatherController: ObservableObject {
     @Published private(set) var settings: WeatherSettings
     @Published private(set) var isRefreshing = false
     @Published private(set) var automaticLocationStatus: AutomaticLocationStatus = .inactive
+
+    var headerContext: WeatherHeaderContext? {
+        guard settings.isVisible else { return nil }
+        switch state {
+        case .fresh(let forecast):
+            return WeatherHeaderContext(location: forecast.location, fetchedAt: nil)
+        case .stale(let forecast, let fetchedAt):
+            return WeatherHeaderContext(location: forecast.location, fetchedAt: fetchedAt)
+        case .noLocation, .unavailable:
+            return nil
+        }
+    }
 
     private let settingsStore: WeatherSettingsStore
     private let cacheStore: WeatherForecastCacheStore

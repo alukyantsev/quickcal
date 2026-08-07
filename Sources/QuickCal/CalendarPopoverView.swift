@@ -347,7 +347,12 @@ struct CalendarPopoverView: View {
 
     private func calendarSurface(today: Date) -> some View {
         VStack(spacing: themeStyle.usesWeekRules ? 7 : 9) {
-            monthNavigation
+            VStack(alignment: .leading, spacing: 2) {
+                monthNavigation
+                if let weatherController {
+                    WeatherHeaderContextView(controller: weatherController)
+                }
+            }
 
             if let month = CalendarMonth(
                 containing: displayedMonth,
@@ -865,5 +870,50 @@ struct CalendarPopoverView: View {
             return
         }
         displayedMonth = interval.start
+    }
+}
+
+@MainActor
+private struct WeatherHeaderContextView: View {
+    @ObservedObject var controller: WeatherController
+
+    @Environment(\.quickCalThemeStyle) private var themeStyle
+
+    private let localization = QuickCalLocalization.current
+
+    var body: some View {
+        if let context = controller.headerContext {
+            HStack(spacing: 5) {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(verbatim: context.location.displayName)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                if let fetchedAt = context.fetchedAt {
+                    Text(verbatim: localization.format(
+                        .weatherUpdatedFormat,
+                        Self.updatedString(fetchedAt)
+                    ))
+                    .lineLimit(1)
+                }
+            }
+            .font(.system(
+                size: 10,
+                weight: .medium,
+                design: themeStyle.layout == .instrumentGrid ? .monospaced : themeStyle.dayFontDesign
+            ))
+            .foregroundStyle(themeStyle.secondaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 2)
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private static func updatedString(_ date: Date) -> String {
+        DateFormatter.localizedString(
+            from: date,
+            dateStyle: .none,
+            timeStyle: .short
+        )
     }
 }

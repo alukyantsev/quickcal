@@ -22,18 +22,41 @@ struct WeatherDisplayPeriod: Equatable, Identifiable {
     }
 
     static func symbol(for weatherCode: Int, at date: Date, timeZone: TimeZone = .autoupdatingCurrent) -> String {
+        iconStyle(for: weatherCode, at: date, timeZone: timeZone).symbol
+    }
+
+    static func iconStyle(
+        for weatherCode: Int,
+        at date: Date,
+        timeZone: TimeZone = .autoupdatingCurrent
+    ) -> WeatherIconStyle {
         let hour = Calendar.autoupdatingCurrent.dateComponents(in: timeZone, from: date).hour ?? 12
         let isNight = hour < 6 || hour >= 20
         switch weatherCode {
-        case 0: return isNight ? "moon.stars.fill" : "sun.max.fill"
-        case 1, 2: return isNight ? "cloud.moon.fill" : "cloud.sun.fill"
-        case 3: return "cloud.fill"
-        case 45, 48: return "cloud.fog.fill"
-        case 51, 53, 55, 56, 57: return "cloud.drizzle.fill"
-        case 61, 63, 65, 66, 67, 80, 81, 82: return "cloud.rain.fill"
-        case 71, 73, 75, 77, 85, 86: return "cloud.snow.fill"
-        case 95, 96, 99: return "cloud.bolt.rain.fill"
-        default: return "cloud.fill"
+        case 0:
+            return WeatherIconStyle(
+                symbol: isNight ? "moon.stars.fill" : "sun.max.fill",
+                primary: Color(rgb: 0xF5B942), secondary: Color(rgb: 0xFFE39A)
+            )
+        case 1, 2:
+            return WeatherIconStyle(
+                symbol: isNight ? "cloud.moon.fill" : "cloud.sun.fill",
+                primary: Color(rgb: 0xF5B942), secondary: Color(rgb: 0x98A2AE)
+            )
+        case 3:
+            return WeatherIconStyle(symbol: "cloud.fill", primary: Color(rgb: 0x98A2AE), secondary: Color(rgb: 0xC2C9D1))
+        case 45, 48:
+            return WeatherIconStyle(symbol: "cloud.fog.fill", primary: Color(rgb: 0x87939E), secondary: Color(rgb: 0xB5BEC7))
+        case 51, 53, 55, 56, 57:
+            return WeatherIconStyle(symbol: "cloud.drizzle.fill", primary: Color(rgb: 0x4E9BE6), secondary: Color(rgb: 0x84BDED))
+        case 61, 63, 65, 66, 67, 80, 81, 82:
+            return WeatherIconStyle(symbol: "cloud.rain.fill", primary: Color(rgb: 0x4E9BE6), secondary: Color(rgb: 0x84BDED))
+        case 71, 73, 75, 77, 85, 86:
+            return WeatherIconStyle(symbol: "cloud.snow.fill", primary: Color(rgb: 0x75BEDA), secondary: Color(rgb: 0xB9E4F2))
+        case 95, 96, 99:
+            return WeatherIconStyle(symbol: "cloud.bolt.rain.fill", primary: Color(rgb: 0x8976D8), secondary: Color(rgb: 0x4E9BE6))
+        default:
+            return WeatherIconStyle(symbol: "cloud.fill", primary: Color(rgb: 0x98A2AE), secondary: Color(rgb: 0xC2C9D1))
         }
     }
 
@@ -48,6 +71,12 @@ struct WeatherDisplayPeriod: Equatable, Identifiable {
         formatter.setLocalizedDateFormatFromTemplate("Hm")
         return formatter.string(from: date)
     }
+}
+
+struct WeatherIconStyle {
+    let symbol: String
+    let primary: Color
+    let secondary: Color
 }
 
 struct WeatherDayGroup: Equatable, Identifiable {
@@ -118,22 +147,6 @@ struct WeatherRailView: View {
             unavailable
         } else {
             VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 5) {
-                    Image(systemName: "location.fill")
-                        .font(.system(size: 10, weight: .semibold))
-                    Text(verbatim: forecast.location.displayName)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    if let staleAt {
-                        Text(verbatim: localization.format(
-                            .weatherUpdatedFormat,
-                            Self.updatedString(staleAt)
-                        ))
-                    }
-                }
-                .font(microFont)
-                .foregroundStyle(microTextColor)
-
                 periodScroller(periods)
 
                 if staleAt != nil {
@@ -292,13 +305,6 @@ struct WeatherRailView: View {
         }
     }
 
-    private static func updatedString(_ date: Date) -> String {
-        DateFormatter.localizedString(
-            from: date,
-            dateStyle: .none,
-            timeStyle: .short
-        )
-    }
 }
 
 private struct WeatherRailWheelPager: NSViewRepresentable {
@@ -354,11 +360,17 @@ struct WeatherPeriodCell: View {
 
     var body: some View {
         let point = period.point
+        let iconStyle = WeatherDisplayPeriod.iconStyle(
+            for: point.weatherCode,
+            at: point.timestamp
+        )
         VStack(spacing: 2) {
             Text(verbatim: timeString(point.timestamp))
                 .font(measurementFont.weight(.semibold))
-            Image(systemName: WeatherDisplayPeriod.symbol(for: point.weatherCode, at: point.timestamp))
-                .font(.system(size: 16, weight: .medium))
+            Image(systemName: iconStyle.symbol)
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(iconStyle.primary, iconStyle.secondary)
+                .font(.system(size: 18, weight: .medium))
                 .frame(height: 20)
             Text(verbatim: localization.format(.weatherTemperatureFormat, point.temperatureCelsius))
                 .font(measurementFont.weight(.semibold))

@@ -420,6 +420,26 @@ struct WeatherControllerTests {
     }
 
     @Test
+    func headerContextTracksWeatherVisibilityAndForecastLocation() async {
+        let location = fixtureLocation(displayName: "Moscow")
+        let forecast = fixtureForecast(location: location)
+        let controller = makeController(
+            settings: WeatherSettings(isVisible: true, manualLocation: location),
+            provider: ForecastProvider(responses: [.success(forecast)]),
+            locationService: LocationService(locationResult: .success(location))
+        )
+
+        await controller.refreshNow()
+        #expect(controller.headerContext == WeatherHeaderContext(
+            location: location,
+            fetchedAt: nil
+        ))
+
+        controller.setVisibility(false)
+        #expect(controller.headerContext == nil)
+    }
+
+    @Test
     func usesStaleCacheForTwentyFourHoursAndKeepsItAfterRefreshFailure() async {
         let clock = TestClock(Date(timeIntervalSince1970: 1_767_225_600))
         let location = fixtureLocation()
