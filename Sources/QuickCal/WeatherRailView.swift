@@ -111,6 +111,22 @@ struct WeatherDayGroup: Equatable, Identifiable {
     }
 }
 
+enum WeatherRailPaging {
+    static let pageSize = 4
+
+    static func nextStartIndex(
+        from startIndex: Int,
+        direction: Int,
+        periodCount: Int
+    ) -> Int {
+        let candidate = startIndex + direction * pageSize
+        guard candidate >= 0, candidate < periodCount else {
+            return startIndex
+        }
+        return candidate
+    }
+}
+
 @MainActor
 struct WeatherRailView: View {
     @ObservedObject var controller: WeatherController
@@ -159,9 +175,8 @@ struct WeatherRailView: View {
 
     private func periodScroller(_ periods: [WeatherDisplayPeriod]) -> some View {
         GeometryReader { geometry in
-            let lastStartIndex = max(0, periods.count - 4)
-            let startIndex = min(firstVisibleIndex, lastStartIndex)
-            let visiblePeriods = Array(periods.dropFirst(startIndex).prefix(4))
+            let startIndex = firstVisibleIndex
+            let visiblePeriods = Array(periods.dropFirst(startIndex).prefix(WeatherRailPaging.pageSize))
             let dayGroups = WeatherDayGroup.make(from: visiblePeriods)
 
             ZStack {
@@ -199,13 +214,21 @@ struct WeatherRailView: View {
                 HStack {
                     if startIndex > 0 {
                         railArrow("chevron.left", title: localization.string(.previousMonth)) {
-                            moveViewport(to: max(0, startIndex - 4))
+                            moveViewport(to: WeatherRailPaging.nextStartIndex(
+                                from: startIndex,
+                                direction: -1,
+                                periodCount: periods.count
+                            ))
                         }
                     }
                     Spacer()
-                    if startIndex < lastStartIndex {
+                    if startIndex + WeatherRailPaging.pageSize < periods.count {
                         railArrow("chevron.right", title: localization.string(.nextMonth)) {
-                            moveViewport(to: min(lastStartIndex, startIndex + 4))
+                            moveViewport(to: WeatherRailPaging.nextStartIndex(
+                                from: startIndex,
+                                direction: 1,
+                                periodCount: periods.count
+                            ))
                         }
                     }
                 }
@@ -215,9 +238,11 @@ struct WeatherRailView: View {
             }
             .background {
                 WeatherRailWheelPager { direction in
-                    let nextIndex = direction == .forward
-                        ? min(lastStartIndex, startIndex + 4)
-                        : max(0, startIndex - 4)
+                    let nextIndex = WeatherRailPaging.nextStartIndex(
+                        from: startIndex,
+                        direction: direction == .forward ? 1 : -1,
+                        periodCount: periods.count
+                    )
                     guard nextIndex != startIndex else { return }
                     moveViewport(to: nextIndex)
                 }

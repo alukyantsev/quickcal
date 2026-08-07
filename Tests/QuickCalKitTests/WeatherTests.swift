@@ -523,6 +523,30 @@ struct WeatherControllerTests {
 @Suite
 struct WeatherRailPresentationTests {
     @Test
+    func pagingMovesOnlyInFourCardSteps() {
+        #expect(WeatherRailPaging.nextStartIndex(
+            from: 0,
+            direction: 1,
+            periodCount: 10
+        ) == 4)
+        #expect(WeatherRailPaging.nextStartIndex(
+            from: 4,
+            direction: 1,
+            periodCount: 10
+        ) == 8)
+        #expect(WeatherRailPaging.nextStartIndex(
+            from: 8,
+            direction: 1,
+            periodCount: 10
+        ) == 8)
+        #expect(WeatherRailPaging.nextStartIndex(
+            from: 8,
+            direction: -1,
+            periodCount: 10
+        ) == 4)
+    }
+
+    @Test
     func groupsVisiblePeriodsByLocalCalendarDay() {
         let timeZone = TimeZone(secondsFromGMT: 10 * 3_600)!
         var calendar = Calendar(identifier: .gregorian)
