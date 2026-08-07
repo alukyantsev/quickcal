@@ -7,7 +7,10 @@ enum QuotePresentationState: Equatable {
     case idle
     case loading
     case fresh(MarketQuoteSnapshot, fetchedAt: Date)
-    case unavailable
+    case stale(MarketQuoteSnapshot, fetchedAt: Date, failedTickers: [String])
+    case partial(MarketQuoteSnapshot, fetchedAt: Date, failedTickers: [String])
+    case error(failedTickers: [String])
+    case empty
 }
 
 @MainActor
@@ -17,8 +20,25 @@ final class QuoteController: ObservableObject {
     @Published private(set) var isRefreshing = false
 
     var lastFetchedAt: Date? {
-        if case .fresh(_, let fetchedAt) = state { return fetchedAt }
-        return nil
+        switch state {
+        case .fresh(_, let fetchedAt),
+             .stale(_, let fetchedAt, _),
+             .partial(_, let fetchedAt, _):
+            return fetchedAt
+        case .idle, .loading, .error, .empty:
+            return nil
+        }
+    }
+
+    var failedTickers: [String] {
+        switch state {
+        case .stale(_, _, let failedTickers),
+             .partial(_, _, let failedTickers),
+             .error(let failedTickers):
+            return failedTickers
+        case .idle, .loading, .fresh, .empty:
+            return []
+        }
     }
 
     private let settingsStore: MarketQuoteSettingsStore
@@ -54,6 +74,23 @@ final class QuoteController: ObservableObject {
         if isVisible { refresh() }
     }
 
+    func setTickers(from input: String) {
+        setTickers(MarketQuoteSettings.normalizedTickers(from: input))
+    }
+
+    func setTickers(_ tickers: [String]) {
+        let updated = MarketQuoteSettings(isVisible: settings.isVisible, tickers: tickers)
+        settings = updated
+        settingsStore.update(updated)
+        if updated.isVisible {
+            if updated.tickers.isEmpty {
+                state = .empty
+            } else {
+                refresh()
+            }
+        }
+    }
+
     func refresh() {
         guard settings.isVisible, refreshTask == nil else { return }
         refreshTask = Task { [weak self] in
@@ -73,37 +110,55 @@ final class QuoteController: ObservableObject {
     }
 
     private func performRefresh() async {
+        guard !settings.tickers.isEmpty else {
+            state = .empty
+            return
+        }
         isRefreshing = true
         state = .loading
         defer { isRefreshing = false }
 
         var quotes: [MarketQuote] = []
+        var failedTickers: [String] = []
         for ticker in settings.tickers {
-            if let quote = try? await provider.quote(for: ticker) {
+            do {
+                let quote = try await provider.quote(for: ticker)
                 quotes.append(quote)
+            } catch {
+                failedTickers.append(ticker)
             }
         }
         guard !quotes.isEmpty else {
-            updatePresentationFromCache()
+            updatePresentationFromCache(failedTickers: failedTickers)
             return
         }
 
         let fetchedAt = now()
         let snapshot = MarketQuoteSnapshot(quotes: quotes)
         cacheStore.save(MarketQuoteCacheEntry(snapshot: snapshot, fetchedAt: fetchedAt))
-        state = .fresh(snapshot, fetchedAt: fetchedAt)
+        state = failedTickers.isEmpty
+            ? .fresh(snapshot, fetchedAt: fetchedAt)
+            : .partial(snapshot, fetchedAt: fetchedAt, failedTickers: failedTickers)
     }
 
-    private func updatePresentationFromCache() {
+    private func updatePresentationFromCache(failedTickers: [String] = []) {
         guard settings.isVisible else {
             state = .idle
             return
         }
-        guard let entry = cacheStore.load(), entry.isUsable(at: now()) else {
-            state = .unavailable
+        guard !settings.tickers.isEmpty else {
+            state = .empty
             return
         }
-        state = .fresh(entry.snapshot, fetchedAt: entry.fetchedAt)
+        guard let entry = cacheStore.load(), entry.isUsable(at: now()) else {
+            state = .error(failedTickers: failedTickers)
+            return
+        }
+        state = .stale(
+            entry.snapshot,
+            fetchedAt: entry.fetchedAt,
+            failedTickers: failedTickers
+        )
     }
 }
 

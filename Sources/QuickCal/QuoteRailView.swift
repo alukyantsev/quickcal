@@ -13,8 +13,15 @@ struct QuoteRailView: View {
             if controller.settings.isVisible {
                 switch controller.state {
                 case .fresh(let snapshot, _): quoteRows(snapshot.quotes)
+                case .stale(let snapshot, let fetchedAt, let failedTickers):
+                    quoteRows(snapshot.quotes)
+                    staleNotice(fetchedAt: fetchedAt, failedTickers: failedTickers)
+                case .partial(let snapshot, let fetchedAt, let failedTickers):
+                    quoteRows(snapshot.quotes)
+                    partialNotice(fetchedAt: fetchedAt, failedTickers: failedTickers)
                 case .loading: loading
-                case .unavailable: unavailable
+                case .error(let failedTickers): unavailable(failedTickers: failedTickers)
+                case .empty: empty
                 case .idle: EmptyView()
                 }
             } else {
@@ -32,6 +39,15 @@ struct QuoteRailView: View {
                 .padding(.bottom, 3)
             ForEach(quotes, id: \.ticker) { quote in
                 quoteRow(quote)
+            }
+            if let dataDate = quotes.map(\.dataDate).max() {
+                Text(verbatim: "Данные на \(Self.dataDateString(dataDate))")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(themeStyle.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 2)
+                    .padding(.top, 2)
+                    .accessibilityLabel(Text(verbatim: "Дата рыночных данных: \(Self.dataDateString(dataDate))"))
             }
         }
         .padding(.top, themeStyle.usesWeekRules ? 5 : 3)
@@ -61,29 +77,90 @@ struct QuoteRailView: View {
     private var loading: some View {
         HStack(spacing: 7) {
             ProgressView().controlSize(.small)
-            Text(verbatim: "MOEX")
+            Text(verbatim: "Загрузка котировок MOEX")
             Spacer(minLength: 0)
         }
         .font(.system(size: 11, weight: .medium))
         .foregroundStyle(themeStyle.secondaryText)
         .padding(.top, themeStyle.usesWeekRules ? 5 : 3)
+        .accessibilityLabel(Text(verbatim: "Загрузка котировок MOEX"))
     }
 
-    private var unavailable: some View {
+    private func unavailable(failedTickers: [String]) -> some View {
         HStack(spacing: 7) {
             Image(systemName: "chart.line.downtrend.xyaxis")
             Text(verbatim: "MOEX недоступен")
             Spacer(minLength: 0)
-            Button("Обновить") { refresh() }
-                .buttonStyle(.plain)
+            retryButton
         }
         .font(.system(size: 11, weight: .medium))
         .foregroundStyle(themeStyle.secondaryText)
         .padding(.top, themeStyle.usesWeekRules ? 5 : 3)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: errorAccessibilityText(for: failedTickers)))
+    }
+
+    private var empty: some View {
+        HStack(spacing: 7) {
+            Text(verbatim: "Добавьте тикеры в настройках")
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            retryButton
+        }
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(themeStyle.secondaryText)
+        .padding(.top, themeStyle.usesWeekRules ? 5 : 3)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: "Список котировок пуст. Добавьте тикеры в настройках котировок или повторите обновление."))
+    }
+
+    private func staleNotice(fetchedAt: Date, failedTickers: [String]) -> some View {
+        notice(
+            "Показаны сохранённые данные от \(Self.dataDateString(fetchedAt))",
+            accessibility: failedTickers.isEmpty
+                ? "Показаны устаревшие сохранённые данные от \(Self.dataDateString(fetchedAt))."
+                : "Показаны устаревшие сохранённые данные. \(errorAccessibilityText(for: failedTickers))"
+        )
+    }
+
+    private func partialNotice(fetchedAt: Date, failedTickers: [String]) -> some View {
+        notice(
+            "Не загружены: \(failedTickers.joined(separator: ", "))",
+            accessibility: "Часть котировок загружена. \(errorAccessibilityText(for: failedTickers)) Данные обновлены \(Self.dataDateString(fetchedAt))."
+        )
+    }
+
+    private func notice(_ text: String, accessibility: String) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 10, weight: .semibold))
+            Text(verbatim: text)
+                .lineLimit(2)
+            Spacer(minLength: 0)
+            retryButton
+        }
+        .font(.system(size: 10, weight: .medium))
+        .foregroundStyle(themeStyle.secondaryText)
+        .padding(.horizontal, 2)
+        .padding(.top, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: accessibility))
+    }
+
+    private var retryButton: some View {
+        Button("Обновить") { refresh() }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: "Повторить загрузку котировок MOEX"))
+            .accessibilityHint(Text(verbatim: "Повторно загружает котировки из MOEX"))
     }
 
     private func refresh() {
         if let onRefresh { onRefresh() } else { controller.refresh() }
+    }
+
+    private func errorAccessibilityText(for failedTickers: [String]) -> String {
+        guard !failedTickers.isEmpty else { return "Котировки MOEX недоступны." }
+        return "Не удалось загрузить тикеры: \(failedTickers.joined(separator: ", "))."
     }
 
     private func changeColor(for change: Double) -> Color {

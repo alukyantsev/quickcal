@@ -7,11 +7,21 @@ import QuickCalKit
 @Suite(.serialized)
 @MainActor
 struct QuoteControllerTests {
+    private enum TestError: Error { case unavailable }
+
     private actor QuoteProvider: MarketQuoteProviding {
         private var requests: [String] = []
+        private let unavailableTickers: Set<String>
+
+        init(unavailableTickers: Set<String> = []) {
+            self.unavailableTickers = unavailableTickers
+        }
 
         func quote(for ticker: String) async throws -> MarketQuote {
             requests.append(ticker)
+            if unavailableTickers.contains(ticker) {
+                throw TestError.unavailable
+            }
             return MarketQuote(
                 ticker: ticker,
                 displayName: ticker == "USDRUBF" ? "USD/RUB FUT" : ticker,
@@ -145,6 +155,95 @@ struct QuoteControllerTests {
 
         #expect(image.size.width == 320)
         #expect(image.size.height >= 80)
+    }
+
+    @Test
+    func customWatchlistKeepsNormalizedOrderAndRetainsSuccessfulQuotesAfterAnUnknownTicker() async {
+        let fixture = defaultsFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let provider = QuoteProvider(unavailableTickers: ["UNKNOWN"])
+        let controller = QuoteController(
+            settingsStore: visibleSettingsStore(defaults: fixture.defaults, key: "settings"),
+            cacheStore: MarketQuoteCacheStore(userDefaults: fixture.defaults, key: "cache"),
+            provider: provider,
+            now: { Date(timeIntervalSince1970: 1_767_225_600) }
+        )
+
+        controller.setTickers(from: " sber, unknown, IMOEX, SBER ")
+        await controller.refreshNow()
+
+        #expect(controller.settings.tickers == ["SBER", "UNKNOWN", "IMOEX"])
+        guard case .partial(let snapshot, _, let failedTickers) = controller.state else {
+            Issue.record("Expected partial quote state")
+            return
+        }
+        #expect(snapshot.quotes.map(\.ticker) == ["SBER", "IMOEX"])
+        #expect(failedTickers == ["UNKNOWN"])
+        #expect(controller.failedTickers == ["UNKNOWN"])
+    }
+
+    @Test
+    func fallsBackToUsableSevenDayCacheWhenAllRequestsFail() async {
+        let fixture = defaultsFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let now = Date(timeIntervalSince1970: 1_767_225_600)
+        let cache = MarketQuoteCacheStore(userDefaults: fixture.defaults, key: "cache")
+        cache.save(MarketQuoteCacheEntry(
+            snapshot: MarketQuoteSnapshot(quotes: [MarketQuote(
+                ticker: "SBER", displayName: "SBER", price: 312.4,
+                change: 2.1, changePercent: 0.68, dataDate: now
+            )]),
+            fetchedAt: now.addingTimeInterval(-6 * 24 * 60 * 60)
+        ))
+        let settings = MarketQuoteSettingsStore(userDefaults: fixture.defaults, key: "settings")
+        settings.update(MarketQuoteSettings(isVisible: true, tickers: ["SBER"]))
+        let controller = QuoteController(
+            settingsStore: settings,
+            cacheStore: cache,
+            provider: QuoteProvider(unavailableTickers: ["SBER"]),
+            now: { now }
+        )
+
+        await controller.refreshNow()
+
+        guard case .stale(let snapshot, _, let failedTickers) = controller.state else {
+            Issue.record("Expected stale cache state")
+            return
+        }
+        #expect(snapshot.quotes.map(\.ticker) == ["SBER"])
+        #expect(failedTickers == ["SBER"])
+    }
+
+    @Test
+    func emptyWatchlistHasAnExplicitPresentationState() {
+        let fixture = defaultsFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let controller = QuoteController(
+            settingsStore: visibleSettingsStore(defaults: fixture.defaults, key: "settings"),
+            cacheStore: MarketQuoteCacheStore(userDefaults: fixture.defaults, key: "cache"),
+            provider: QuoteProvider()
+        )
+
+        controller.setTickers([])
+
+        #expect(controller.state == .empty)
+    }
+
+    @Test
+    func reportsAFullErrorWhenNoQuoteOrUsableCacheIsAvailable() async {
+        let fixture = defaultsFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let settings = MarketQuoteSettingsStore(userDefaults: fixture.defaults, key: "settings")
+        settings.update(MarketQuoteSettings(isVisible: true, tickers: ["SBER"]))
+        let controller = QuoteController(
+            settingsStore: settings,
+            cacheStore: MarketQuoteCacheStore(userDefaults: fixture.defaults, key: "cache"),
+            provider: QuoteProvider(unavailableTickers: ["SBER"])
+        )
+
+        await controller.refreshNow()
+
+        #expect(controller.state == .error(failedTickers: ["SBER"]))
     }
 
     private func visibleSettingsStore(defaults: UserDefaults, key: String) -> MarketQuoteSettingsStore {

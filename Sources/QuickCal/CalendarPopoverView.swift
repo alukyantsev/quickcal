@@ -273,6 +273,69 @@ private struct WeatherIntervalButton: View {
 }
 
 @MainActor
+private struct MarketQuoteOptionsView: View {
+    @ObservedObject var controller: QuoteController
+
+    @Environment(\.quickCalThemeStyle) private var themeStyle
+    @State private var tickerInput = ""
+    @FocusState private var isTickerFieldFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Toggle(
+                "Показывать котировки",
+                isOn: Binding(
+                    get: { controller.settings.isVisible },
+                    set: { controller.setVisibility($0) }
+                )
+            )
+            .toggleStyle(CompactCheckboxToggleStyle())
+            .font(.system(size: 13))
+            .foregroundStyle(themeStyle.primaryText)
+            .padding(.horizontal, 7)
+            .frame(height: 29)
+
+            if controller.settings.isVisible {
+                Text(verbatim: "Тикеры через запятую")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(themeStyle.primaryText)
+                    .padding(.horizontal, 7)
+
+                TextField("USDRUBF, EURRUBF, EUR/USD, IMOEX", text: $tickerInput)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12))
+                    .padding(.horizontal, 7)
+                    .focused($isTickerFieldFocused)
+                    .onSubmit(commitTickers)
+                    .onChange(of: isTickerFieldFocused) { _, focused in
+                        if !focused { commitTickers() }
+                    }
+                    .accessibilityLabel(Text(verbatim: "Тикеры котировок через запятую"))
+                    .accessibilityHint(Text(verbatim: "Изменения сохраняются по Enter или после ухода из поля"))
+
+                if !controller.failedTickers.isEmpty {
+                    Text(verbatim: "Неизвестны или недоступны: \(controller.failedTickers.joined(separator: ", "))")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(themeStyle.secondaryText)
+                        .padding(.horizontal, 7)
+                        .accessibilityLabel(Text(verbatim: "Неизвестные или недоступные тикеры: \(controller.failedTickers.joined(separator: ", "))"))
+                }
+            }
+        }
+        .onAppear {
+            tickerInput = controller.settings.tickers.joined(separator: ", ")
+        }
+    }
+
+    private func commitTickers() {
+        let normalized = MarketQuoteSettings.normalizedTickers(from: tickerInput)
+        tickerInput = normalized.joined(separator: ", ")
+        guard normalized != controller.settings.tickers else { return }
+        controller.setTickers(normalized)
+    }
+}
+
+@MainActor
 struct CalendarPopoverView: View {
     @AppStorage("showWeekNumbers") private var showWeekNumbers = true
     @ObservedObject private var themeStore: QuickCalThemeStore
@@ -773,6 +836,15 @@ struct CalendarPopoverView: View {
                     .padding(.vertical, 2)
 
                 WeatherOptionsView(controller: weatherController)
+            }
+
+            if let quoteController {
+                Rectangle()
+                    .fill(popupDividerColor)
+                    .frame(height: 1)
+                    .padding(.vertical, 2)
+
+                MarketQuoteOptionsView(controller: quoteController)
             }
 
             Rectangle()
