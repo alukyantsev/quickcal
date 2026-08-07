@@ -81,16 +81,21 @@ struct QuoteRailView: View {
             quote.change >= 0 ? "+" : "",
             quote.changePercent
         )
+        let absoluteChange = Self.signedChangeString(
+            quote.change,
+            maximumFractionDigits: quote.price < 10 ? 4 : 2,
+            locale: localization.locale
+        )
         return HStack(spacing: 6) {
             Text(verbatim: quote.displayName)
                 .lineLimit(1)
             Spacer(minLength: 6)
             Text(verbatim: Self.priceString(quote.price))
                 .monospacedDigit()
-            Text(verbatim: "\(direction) \(change)")
+            Text(verbatim: "\(direction) \(absoluteChange) · \(change)")
                 .monospacedDigit()
                 .foregroundStyle(changeColor(for: quote.change))
-                .frame(minWidth: 62, alignment: .trailing)
+                .frame(minWidth: 116, alignment: .trailing)
         }
         .font(.system(size: 11, weight: .medium, design: themeStyle.layout == .instrumentGrid ? .monospaced : .default))
         .foregroundStyle(themeStyle.primaryText)
@@ -101,7 +106,7 @@ struct QuoteRailView: View {
             quote.displayName,
             Self.priceString(quote.price),
             directionAccessibility,
-            String(format: "%.2f", locale: localization.locale, quote.change),
+            absoluteChange,
             change,
             quote.dataDate.map(dataDateString) ?? localization.string(.marketDataDateUnavailable)
         )))
@@ -215,6 +220,20 @@ struct QuoteRailView: View {
         formatter.maximumFractionDigits = 4
         formatter.minimumFractionDigits = 0
         return formatter.string(from: NSNumber(value: price)) ?? "\(price)"
+    }
+
+    private static func signedChangeString(
+        _ change: Double,
+        maximumFractionDigits: Int,
+        locale: Locale
+    ) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = maximumFractionDigits
+        formatter.minimumFractionDigits = maximumFractionDigits
+        formatter.locale = locale
+        let value = formatter.string(from: NSNumber(value: abs(change))) ?? "\(abs(change))"
+        return "\(change >= 0 ? "+" : "−")\(value)"
     }
 
     private func dataDateString(_ date: Date) -> String {

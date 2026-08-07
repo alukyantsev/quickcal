@@ -446,14 +446,6 @@ struct CalendarPopoverView: View {
                     await workCalendar.load(month: month)
                 }
 
-                if let weatherController {
-                    WeatherRailView(controller: weatherController, onRefresh: onRefresh)
-                }
-
-                if let quoteController {
-                    QuoteRailView(controller: quoteController, onRefresh: onRefresh)
-                }
-
                 if let vacation = VacationCountdown.currentOrUpcoming(
                     from: selectedDates.selectedDates,
                     now: today,
@@ -469,6 +461,14 @@ struct CalendarPopoverView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 3)
+                }
+
+                if let weatherController {
+                    WeatherRailView(controller: weatherController, onRefresh: onRefresh)
+                }
+
+                if let quoteController {
+                    QuoteRailView(controller: quoteController, onRefresh: onRefresh)
                 }
             } else {
                 HoverActionButton(
