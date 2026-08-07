@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import QuickCalKit
 
@@ -132,15 +133,24 @@ struct WeatherRailView: View {
                 HStack {
                     if startIndex > 0 {
                         railArrow("chevron.left", title: localization.string(.previousMonth)) {
-                            moveViewport(to: max(0, startIndex - 1))
+                            moveViewport(to: max(0, startIndex - 4))
                         }
                     }
                     Spacer()
                     if startIndex < lastStartIndex {
                         railArrow("chevron.right", title: localization.string(.nextMonth)) {
-                            moveViewport(to: min(lastStartIndex, startIndex + 1))
+                            moveViewport(to: min(lastStartIndex, startIndex + 4))
                         }
                     }
+                }
+            }
+            .background {
+                WeatherRailWheelPager { direction in
+                    let nextIndex = direction == .forward
+                        ? min(lastStartIndex, startIndex + 4)
+                        : max(0, startIndex - 4)
+                    guard nextIndex != startIndex else { return }
+                    moveViewport(to: nextIndex)
                 }
             }
         }
@@ -224,6 +234,50 @@ struct WeatherRailView: View {
             dateStyle: .none,
             timeStyle: .short
         )
+    }
+}
+
+private struct WeatherRailWheelPager: NSViewRepresentable {
+    enum Direction {
+        case forward
+        case backward
+    }
+
+    let onPage: (Direction) -> Void
+
+    func makeNSView(context: Context) -> WeatherRailWheelView {
+        WeatherRailWheelView(onPage: onPage)
+    }
+
+    func updateNSView(_ view: WeatherRailWheelView, context: Context) {
+        view.onPage = onPage
+    }
+}
+
+private final class WeatherRailWheelView: NSView {
+    var onPage: (WeatherRailWheelPager.Direction) -> Void
+    private var lastPageAt = Date.distantPast
+
+    init(onPage: @escaping (WeatherRailWheelPager.Direction) -> Void) {
+        self.onPage = onPage
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        let delta = abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY)
+            ? event.scrollingDeltaX
+            : event.scrollingDeltaY
+        guard abs(delta) > 0.5,
+              Date().timeIntervalSince(lastPageAt) > 0.22
+        else {
+            return
+        }
+        lastPageAt = Date()
+        onPage(delta < 0 ? .forward : .backward)
     }
 }
 

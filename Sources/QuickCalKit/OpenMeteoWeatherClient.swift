@@ -73,7 +73,7 @@ public struct OpenMeteoWeatherClient: WeatherForecastProviding, Sendable {
                 URLQueryItem(name: "hourly", value: "temperature_2m,relative_humidity_2m,precipitation_probability,weather_code"),
                 URLQueryItem(name: "timeformat", value: "unixtime"),
                 URLQueryItem(name: "timezone", value: "UTC"),
-                URLQueryItem(name: "forecast_days", value: "2"),
+                URLQueryItem(name: "forecast_hours", value: "48"),
             ]
         )
         do {

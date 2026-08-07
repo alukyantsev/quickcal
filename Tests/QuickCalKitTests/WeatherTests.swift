@@ -83,7 +83,7 @@ struct OpenMeteoWeatherClientTests {
         #expect(query["longitude"] == "37.62")
         #expect(query["timeformat"] == "unixtime")
         #expect(query["timezone"] == "UTC")
-        #expect(query["forecast_days"] == "2")
+        #expect(query["forecast_hours"] == "48")
         #expect(query["hourly"] == "temperature_2m,relative_humidity_2m,precipitation_probability,weather_code")
     }
 
@@ -310,6 +310,43 @@ struct WeatherControllerTests {
         #expect(controller.state == .fresh(forecast))
         #expect(service.locationRequestCount == 1)
         #expect(await provider.latestRequestedLocation() == automatic)
+    }
+
+    @Test
+    func grantingAuthorizationImmediatelyResolvesAutomaticLocation() async {
+        let automatic = fixtureLocation(displayName: "Vladivostok")
+        let forecast = fixtureForecast(location: automatic)
+        let service = LocationService(locationResult: .success(automatic))
+        let provider = ForecastProvider(responses: [.success(forecast)])
+        let controller = makeController(provider: provider, locationService: service)
+
+        controller.setAutomaticModeEnabled(true)
+        service.changeAuthorization(to: .authorized)
+        for _ in 0..<8 { await Task.yield() }
+
+        #expect(controller.settings.automaticLocation == automatic)
+        #expect(controller.state == .fresh(forecast))
+        #expect(service.locationRequestCount == 1)
+    }
+
+    @Test
+    func disablingAutomaticModeKeepsLastAutomaticLocationActive() async {
+        let automatic = fixtureLocation(displayName: "Vladivostok")
+        let manual = fixtureLocation(displayName: "Moscow")
+        let controller = makeController(
+            settings: WeatherSettings(
+                locationMode: .automatic,
+                manualLocation: manual,
+                automaticLocation: automatic
+            ),
+            locationService: LocationService(locationResult: .success(automatic))
+        )
+
+        controller.setAutomaticModeEnabled(false)
+
+        #expect(controller.settings.locationMode == .manual)
+        #expect(controller.settings.resolvedLocation == automatic)
+        #expect(controller.settings.manualLocation == automatic)
     }
 
     @Test

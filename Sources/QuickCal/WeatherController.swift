@@ -105,7 +105,14 @@ final class WeatherController: ObservableObject {
 
     func setAutomaticModeEnabled(_ isEnabled: Bool) {
         var updated = settings
-        updated.locationMode = isEnabled ? .automatic : .manual
+        if isEnabled {
+            updated.locationMode = .automatic
+        } else {
+            // Leaving automatic mode keeps the last resolved automatic city
+            // as the active manual fallback until the user chooses a city.
+            updated.locationMode = .manual
+            updated.manualLocation = updated.automaticLocation ?? updated.manualLocation
+        }
         persist(updated)
 
         guard isEnabled else {
