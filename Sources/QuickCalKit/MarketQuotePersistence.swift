@@ -13,14 +13,26 @@ public final class MarketQuoteSettingsStore: ObservableObject {
     public init(userDefaults: UserDefaults = .standard, key: String = MarketQuoteSettingsStore.defaultKey) {
         self.userDefaults = userDefaults
         self.key = key
-        settings = (try? userDefaults.data(forKey: key).flatMap {
+        let storedSettings = try? userDefaults.data(forKey: key).flatMap {
             try JSONDecoder().decode(MarketQuoteSettings.self, from: $0)
-        }) ?? MarketQuoteSettings()
+        }
+        let migratedSettings = storedSettings.map { stored in
+            guard stored.tickers == MarketQuoteSettings.previousDefaultTickers else { return stored }
+            return MarketQuoteSettings(isVisible: stored.isVisible)
+        }
+        settings = migratedSettings ?? MarketQuoteSettings()
+        if let storedSettings, storedSettings != settings {
+            persist(settings)
+        }
     }
 
     public func update(_ settings: MarketQuoteSettings) {
         self.settings = MarketQuoteSettings(isVisible: settings.isVisible, tickers: settings.tickers)
-        guard let data = try? JSONEncoder().encode(self.settings) else { return }
+        persist(self.settings)
+    }
+
+    private func persist(_ settings: MarketQuoteSettings) {
+        guard let data = try? JSONEncoder().encode(settings) else { return }
         userDefaults.set(data, forKey: key)
     }
 }

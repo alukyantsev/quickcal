@@ -5,18 +5,21 @@ import QuickCalKit
 @Suite
 struct MarketQuoteSettingsTests {
     @Test
-    func defaultsKeepQuotesDisabledWithTheAgreedFourInstruments() {
+    func defaultsKeepQuotesDisabledWithTheAgreedEightInstruments() {
         #expect(MarketQuoteSettings() == MarketQuoteSettings(
             isVisible: false,
-            tickers: ["USDRUBF", "EURRUBF", "EUR/USD", "IMOEX"]
+            tickers: [
+                "USDRUBF", "EURRUBF", "EUR/USD", "IMOEX",
+                "SP500F", "GLDRUBF", "BRENT", "MOEXBTC",
+            ]
         ))
     }
 
     @Test
     func normalizesAliasesWhitespaceCaseAndDuplicatesWhileKeepingOrder() {
         #expect(MarketQuoteSettings.normalizedTickers(
-            from: " usd/rub fut, eur rubf, EUR/USD, imoex, SBER, usdrubf, sber "
-        ) == ["USDRUBF", "EURRUBF", "EUR/USD", "IMOEX", "SBER"])
+            from: " usd/rub fut, eur rubf, EUR/USD, imoex, S&P 500, gold/rub fut, br, bitcoin, SBER, usdrubf, sber "
+        ) == ["USDRUBF", "EURRUBF", "EUR/USD", "IMOEX", "SP500F", "GLDRUBF", "BRENT", "MOEXBTC", "SBER"])
     }
 
     @Test
@@ -40,6 +43,31 @@ struct MarketQuoteSettingsTests {
 
         #expect(MarketQuoteSettingsStore(userDefaults: fixture.defaults, key: "settings").settings == settings)
         #expect(MarketQuoteCacheStore(userDefaults: fixture.defaults, key: "cache").load() == entry)
+    }
+
+    @Test
+    @MainActor
+    func storedPreviousDefaultsMigrateWithoutOverwritingCustomWatchlists() throws {
+        let fixture = defaultsFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let oldDefaults = MarketQuoteSettings(isVisible: true, tickers: MarketQuoteSettings.previousDefaultTickers)
+        fixture.defaults.set(try JSONEncoder().encode(oldDefaults), forKey: "settings")
+
+        let migrated = MarketQuoteSettingsStore(userDefaults: fixture.defaults, key: "settings")
+
+        #expect(migrated.settings == MarketQuoteSettings(isVisible: true))
+        #expect(MarketQuoteSettingsStore(userDefaults: fixture.defaults, key: "settings").settings == MarketQuoteSettings(isVisible: true))
+    }
+
+    @Test
+    @MainActor
+    func storedCustomWatchlistIsNotChangedByDefaultMigration() throws {
+        let fixture = defaultsFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let custom = MarketQuoteSettings(isVisible: true, tickers: ["SBER", "IMOEX"])
+        fixture.defaults.set(try JSONEncoder().encode(custom), forKey: "settings")
+
+        #expect(MarketQuoteSettingsStore(userDefaults: fixture.defaults, key: "settings").settings == custom)
     }
 
     @Test
@@ -78,7 +106,10 @@ struct MOEXISSMarketQuoteProviderTests {
     @Test(arguments: [
         ("USDRUBF", "USD/RUB FUT", "/iss/engines/futures/markets/forts/securities/USDRUBF.json"),
         ("EURRUBF", "EUR/RUB FUT", "/iss/engines/futures/markets/forts/securities/EURRUBF.json"),
+        ("SP500F", "S&P 500 FUT", "/iss/engines/futures/markets/forts/securities/SP500F.json"),
+        ("GLDRUBF", "GOLD ₽ FUT", "/iss/engines/futures/markets/forts/securities/GLDRUBF.json"),
         ("IMOEX", "IMOEX", "/iss/engines/stock/markets/index/securities/IMOEX.json"),
+        ("MOEXBTC", "Bitcoin (MOEX)", "/iss/engines/stock/markets/index/securities/MOEXBTC.json"),
         ("SBER", "SBER", "/iss/engines/stock/markets/shares/boards/TQBR/securities/SBER.json"),
     ])
     func fetchesKnownInstrumentsFromTheirMOEXMarkets(
@@ -158,6 +189,28 @@ struct MOEXISSMarketQuoteProviderTests {
     }
 
     @Test
+    func findsTheNearestActiveBrentContractFromMOEXData() async throws {
+        let recorder = RequestRecorder(responses: [
+            HTTPDataResponse(data: Data("""
+            {"securities":{"columns":["SECID","SHORTNAME","ASSETCODE","LASTTRADEDATE"],"data":[["BRU6","BR-9.26","BR","2026-08-31"],["BRV6","BR-10.26","BR","2026-10-01"]]}}
+            """.utf8), statusCode: 200),
+            quoteResponse(secid: "BRU6", shortName: "BR-9.26", last: 82.7, previous: 82.1, date: "2026-08-08"),
+        ])
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { try! date("2026-08-08") }
+        )
+
+        let quote = try await provider.quote(for: "brent")
+
+        #expect(quote.ticker == "BRENT")
+        #expect(quote.displayName == "Brent FUT")
+        #expect(quote.price == 82.7)
+        let requests = await recorder.requests
+        #expect(requests[1].url?.path == "/iss/engines/futures/markets/forts/securities/BRU6.json")
+    }
+
+    @Test
     func readsTheIndexPriceAndDailyChangeFromTheMOEXIndexMarketdataFields() async throws {
         let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
         {"marketdata":{"columns":["SECID","LASTVALUE","CURRENTVALUE","LASTCHANGE","LASTCHANGEPRC","TRADEDATE"],"data":[["IMOEX",2285.88,2281.31,-4.57,-0.2,"2026-08-07"]]}}
@@ -171,6 +224,24 @@ struct MOEXISSMarketQuoteProviderTests {
         #expect(quote.price == 2281.31)
         #expect(quote.change == -4.57)
         #expect(quote.changePercent == -0.2)
+    }
+
+    @Test
+    func readsTheBitcoinIndexPriceAndDailyChangeFromMOEXIndexFields() async throws {
+        let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
+        {"marketdata":{"columns":["SECID","CURRENTVALUE","LASTCHANGE","LASTCHANGEPRC","TRADEDATE"],"data":[["MOEXBTC",64970.92,310.95,0.48,"2026-08-07"]]}}
+        """.utf8), statusCode: 200)])
+        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
+            await recorder.load(request)
+        })
+
+        let quote = try await provider.quote(for: "bitcoin")
+
+        #expect(quote.ticker == "MOEXBTC")
+        #expect(quote.displayName == "Bitcoin (MOEX)")
+        #expect(quote.price == 64970.92)
+        #expect(quote.change == 310.95)
+        #expect(quote.changePercent == 0.48)
     }
 
     @Test

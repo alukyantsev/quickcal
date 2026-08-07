@@ -1,7 +1,11 @@
 import Foundation
 
 public struct MarketQuoteSettings: Codable, Sendable, Equatable {
-    public static let defaultTickers = ["USDRUBF", "EURRUBF", "EUR/USD", "IMOEX"]
+    public static let previousDefaultTickers = ["USDRUBF", "EURRUBF", "EUR/USD", "IMOEX"]
+    public static let defaultTickers = [
+        "USDRUBF", "EURRUBF", "EUR/USD", "IMOEX",
+        "SP500F", "GLDRUBF", "BRENT", "MOEXBTC",
+    ]
 
     public var isVisible: Bool
     public var tickers: [String]
@@ -35,6 +39,14 @@ public struct MarketQuoteSettings: Codable, Sendable, Equatable {
             return "EURRUBF"
         case "EUR/USD":
             return "EUR/USD"
+        case "S&P500", "S&P500F", "SP500F":
+            return "SP500F"
+        case "GOLD/RUBFUT", "GOLDRUBF", "GLDRUBF":
+            return "GLDRUBF"
+        case "BR", "BRENT":
+            return "BRENT"
+        case "BTC", "BITCOIN", "MOEXBTC":
+            return "MOEXBTC"
         default:
             return compact
         }

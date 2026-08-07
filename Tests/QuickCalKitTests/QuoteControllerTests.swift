@@ -132,7 +132,7 @@ struct QuoteControllerTests {
         coordinator.start()
         #expect(timer.interval == ForegroundRefreshCoordinator.interval)
         timer.fire()
-        for _ in 0..<8 { await Task.yield() }
+        for _ in 0..<(MarketQuoteSettings.defaultTickers.count * 4) { await Task.yield() }
 
         #expect(await forecastProvider.requestCount() == 1)
         #expect(await quoteProvider.requestedTickers() == MarketQuoteSettings.defaultTickers)

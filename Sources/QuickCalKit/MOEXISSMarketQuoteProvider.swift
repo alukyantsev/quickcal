@@ -37,12 +37,15 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
 
     public func quote(for ticker: String) async throws -> MarketQuote {
         let ticker = MarketQuoteSettings.normalizedTicker(ticker)
-        if ticker == "EUR/USD" {
-            let activeContract = try await activeEuroDollarContract()
+        if let assetCode = futuresAssetCode(for: ticker) {
+            let activeContract = try await activeFuturesContract(
+                assetCode: assetCode,
+                requestedTicker: ticker
+            )
             return try await loadQuote(
                 exchangeTicker: activeContract.secid,
                 requestedTicker: ticker,
-                displayName: ticker,
+                displayName: futuresDisplayName(for: ticker),
                 path: "engines/futures/markets/forts/securities/\(activeContract.secid).json"
             )
         }
@@ -62,14 +65,37 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
             ("engines/futures/markets/forts/securities/USDRUBF.json", "USD/RUB FUT")
         case "EURRUBF":
             ("engines/futures/markets/forts/securities/EURRUBF.json", "EUR/RUB FUT")
-        case "IMOEX":
-            ("engines/stock/markets/index/securities/IMOEX.json", "IMOEX")
+        case "SP500F":
+            ("engines/futures/markets/forts/securities/SP500F.json", "S&P 500 FUT")
+        case "GLDRUBF":
+            ("engines/futures/markets/forts/securities/GLDRUBF.json", "GOLD ₽ FUT")
+        case "IMOEX", "MOEXBTC":
+            ("engines/stock/markets/index/securities/\(ticker).json", ticker == "MOEXBTC" ? "Bitcoin (MOEX)" : "IMOEX")
         default:
             ("engines/stock/markets/shares/boards/TQBR/securities/\(ticker).json", ticker)
         }
     }
 
-    private func activeEuroDollarContract() async throws -> (secid: String, expiry: Date?) {
+    private func futuresAssetCode(for ticker: String) -> String? {
+        switch ticker {
+        case "EUR/USD": "ED"
+        case "BRENT": "BR"
+        default: nil
+        }
+    }
+
+    private func futuresDisplayName(for ticker: String) -> String {
+        switch ticker {
+        case "EUR/USD": ticker
+        case "BRENT": "Brent FUT"
+        default: ticker
+        }
+    }
+
+    private func activeFuturesContract(
+        assetCode: String,
+        requestedTicker: String
+    ) async throws -> (secid: String, expiry: Date?) {
         let response = try await load(
             path: "engines/futures/markets/forts/securities.json",
             queryItems: [
@@ -82,11 +108,11 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
         let candidates = securities.rows.compactMap { row -> (String, Date?)? in
             guard
                 let secid = row.string("SECID"),
-                isEuroDollarContract(row, secid: secid)
+                isFuturesContract(row, secid: secid, assetCode: assetCode)
             else { return nil }
             return (secid, row.date("LASTTRADEDATE"))
         }
-        guard !candidates.isEmpty else { throw ClientError.unknownTicker("EUR/USD") }
+        guard !candidates.isEmpty else { throw ClientError.unknownTicker(requestedTicker) }
         let current = now()
         return candidates
             .filter { $0.1.map { $0 >= current } ?? false }
@@ -124,7 +150,7 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
             ?? previous.flatMap { $0 == 0 ? nil : (price - $0) / $0 * 100 }
             ?? 0
         let change: Double
-        if requestedTicker == "IMOEX", let indexChange = values.double("LASTCHANGE") {
+        if ["IMOEX", "MOEXBTC"].contains(requestedTicker), let indexChange = values.double("LASTCHANGE") {
             change = indexChange
         } else {
             change = previous.map { price - $0 }
@@ -168,7 +194,10 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
         (value * 100).rounded() / 100
     }
 
-    private func isEuroDollarContract(_ row: ISSRow, secid: String) -> Bool {
+    private func isFuturesContract(_ row: ISSRow, secid: String, assetCode: String) -> Bool {
+        guard assetCode == "ED" else {
+            return row.string("ASSETCODE")?.uppercased() == assetCode
+        }
         let assetCode = row.string("ASSETCODE")?.uppercased()
         if assetCode == "EURUSD" || row.string("SHORTNAME")?.uppercased().contains("EUR/USD") == true {
             return true
