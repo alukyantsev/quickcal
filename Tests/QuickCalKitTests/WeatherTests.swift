@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+@testable import QuickCal
 import QuickCalKit
 
 @Suite
@@ -184,6 +185,274 @@ struct WeatherPersistenceTests {
 
     private func defaultsFixture() -> (defaults: UserDefaults, suiteName: String) {
         let suiteName = "QuickCalTests.Weather.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return (defaults, suiteName)
+    }
+}
+
+@Suite(.serialized)
+@MainActor
+struct WeatherControllerTests {
+    private actor ForecastProvider: WeatherForecastProviding {
+        enum ProviderError: Error { case unavailable }
+
+        private var responses: [Result<WeatherForecast, Error>]
+        private var requestedLocations: [WeatherLocation] = []
+
+        init(responses: [Result<WeatherForecast, Error>]) {
+            self.responses = responses
+        }
+
+        func searchLocations(query: String) async throws -> [WeatherLocation] { [] }
+
+        func forecast(for location: WeatherLocation) async throws -> WeatherForecast {
+            requestedLocations.append(location)
+            guard !responses.isEmpty else { throw ProviderError.unavailable }
+            return try responses.removeFirst().get()
+        }
+
+        func requestCount() -> Int { requestedLocations.count }
+        func latestRequestedLocation() -> WeatherLocation? { requestedLocations.last }
+    }
+
+    private final class LocationService: WeatherLocationServicing {
+        var authorizationStatus: WeatherLocationAuthorization
+        var authorizationStatusChanged: (@MainActor (WeatherLocationAuthorization) -> Void)?
+        var locationResult: Result<WeatherLocation, Error>
+        private(set) var authorizationRequestCount = 0
+        private(set) var locationRequestCount = 0
+
+        init(
+            authorizationStatus: WeatherLocationAuthorization = .notDetermined,
+            locationResult: Result<WeatherLocation, Error>
+        ) {
+            self.authorizationStatus = authorizationStatus
+            self.locationResult = locationResult
+        }
+
+        func requestAuthorization() {
+            authorizationRequestCount += 1
+        }
+
+        func currentLocation() async throws -> WeatherLocation {
+            locationRequestCount += 1
+            return try locationResult.get()
+        }
+
+        func changeAuthorization(to status: WeatherLocationAuthorization) {
+            authorizationStatus = status
+            authorizationStatusChanged?(status)
+        }
+    }
+
+    private final class RefreshTimer: WeatherRefreshScheduling {
+        private(set) var interval: TimeInterval?
+        private var action: (@MainActor () -> Void)?
+
+        func schedule(every interval: TimeInterval, action: @escaping @MainActor () -> Void) {
+            self.interval = interval
+            self.action = action
+        }
+
+        func invalidate() {
+            interval = nil
+            action = nil
+        }
+
+        func fire() {
+            action?()
+        }
+    }
+
+    private final class TestClock: @unchecked Sendable {
+        var value: Date
+
+        init(_ value: Date) {
+            self.value = value
+        }
+
+        func now() -> Date { value }
+    }
+
+    @Test
+    func doesNotRequestLocationUntilAutomaticModeIsExplicitlyEnabled() async {
+        let location = fixtureLocation()
+        let service = LocationService(locationResult: .success(location))
+        let controller = makeController(locationService: service)
+
+        #expect(service.authorizationRequestCount == 0)
+        #expect(service.locationRequestCount == 0)
+        #expect(controller.state == .noLocation)
+
+        controller.setAutomaticModeEnabled(true)
+
+        #expect(service.authorizationRequestCount == 1)
+        #expect(service.locationRequestCount == 0)
+    }
+
+    @Test
+    func authorizedAutomaticModePersistsLocationAndRefreshesForecast() async {
+        let automatic = fixtureLocation(displayName: "Tver")
+        let forecast = fixtureForecast(location: automatic)
+        let service = LocationService(
+            authorizationStatus: .authorized,
+            locationResult: .success(automatic)
+        )
+        let provider = ForecastProvider(responses: [.success(forecast)])
+        let controller = makeController(provider: provider, locationService: service)
+
+        controller.setAutomaticModeEnabled(true)
+        await controller.refreshNow()
+
+        #expect(controller.settings.locationMode == .automatic)
+        #expect(controller.settings.automaticLocation == automatic)
+        #expect(controller.state == .fresh(forecast))
+        #expect(service.locationRequestCount == 1)
+        #expect(await provider.latestRequestedLocation() == automatic)
+    }
+
+    @Test
+    func foregroundTimerRefreshesAutomaticLocationAndForecastEveryThirtyMinutes() async {
+        let automatic = fixtureLocation()
+        let forecast = fixtureForecast(location: automatic)
+        let service = LocationService(
+            authorizationStatus: .authorized,
+            locationResult: .success(automatic)
+        )
+        let provider = ForecastProvider(responses: [.success(forecast)])
+        let timer = RefreshTimer()
+        let controller = makeController(provider: provider, locationService: service, timer: timer)
+
+        controller.setAutomaticModeEnabled(true)
+        await controller.refreshNow()
+        controller.startForegroundRefresh()
+        timer.fire()
+        await Task.yield()
+        await Task.yield()
+
+        #expect(timer.interval == WeatherController.foregroundRefreshInterval)
+        #expect(service.locationRequestCount == 2)
+        #expect(await provider.requestCount() == 2)
+    }
+
+    @Test
+    func deniedAutomaticLocationUsesManualFallback() async {
+        let manual = fixtureLocation(displayName: "Moscow")
+        let forecast = fixtureForecast(location: manual)
+        let service = LocationService(
+            authorizationStatus: .denied,
+            locationResult: .failure(ForecastProvider.ProviderError.unavailable)
+        )
+        let provider = ForecastProvider(responses: [.success(forecast)])
+        let controller = makeController(
+            settings: WeatherSettings(locationMode: .automatic, manualLocation: manual),
+            provider: provider,
+            locationService: service
+        )
+
+        await controller.refreshNow()
+
+        #expect(service.locationRequestCount == 0)
+        #expect(await provider.latestRequestedLocation() == manual)
+        #expect(controller.state == .fresh(forecast))
+    }
+
+    @Test
+    func automaticLocationErrorUsesLastManualFallback() async {
+        let manual = fixtureLocation(displayName: "Moscow")
+        let forecast = fixtureForecast(location: manual)
+        let service = LocationService(
+            authorizationStatus: .authorized,
+            locationResult: .failure(ForecastProvider.ProviderError.unavailable)
+        )
+        let provider = ForecastProvider(responses: [.success(forecast)])
+        let controller = makeController(
+            settings: WeatherSettings(locationMode: .automatic, manualLocation: manual),
+            provider: provider,
+            locationService: service
+        )
+
+        await controller.refreshNow()
+
+        #expect(service.locationRequestCount == 1)
+        #expect(await provider.latestRequestedLocation() == manual)
+        #expect(controller.state == .fresh(forecast))
+    }
+
+    @Test
+    func usesStaleCacheForTwentyFourHoursAndKeepsItAfterRefreshFailure() async {
+        let clock = TestClock(Date(timeIntervalSince1970: 1_767_225_600))
+        let location = fixtureLocation()
+        let forecast = fixtureForecast(location: location)
+        let cache = WeatherForecastCacheStore(userDefaults: defaultsFixture().defaults, key: UUID().uuidString)
+        cache.save(WeatherForecastCacheEntry(
+            forecast: forecast,
+            fetchedAt: clock.now().addingTimeInterval(-WeatherController.freshCacheLifetime)
+        ))
+        let controller = makeController(
+            settings: WeatherSettings(manualLocation: location),
+            cacheStore: cache,
+            provider: ForecastProvider(responses: [.failure(ForecastProvider.ProviderError.unavailable)]),
+            locationService: LocationService(locationResult: .success(location)),
+            now: { clock.now() }
+        )
+
+        #expect(controller.state == WeatherPresentationState.stale(forecast, fetchedAt: clock.now().addingTimeInterval(-WeatherController.freshCacheLifetime)))
+        await controller.refreshNow()
+        #expect(controller.state == WeatherPresentationState.stale(forecast, fetchedAt: clock.now().addingTimeInterval(-WeatherController.freshCacheLifetime)))
+
+        clock.value = clock.now().addingTimeInterval(WeatherController.staleCacheLifetime + 1)
+        let expired = makeController(
+            settings: WeatherSettings(manualLocation: location),
+            cacheStore: cache,
+            provider: ForecastProvider(responses: []),
+            locationService: LocationService(locationResult: .success(location)),
+            now: { clock.now() }
+        )
+        #expect(expired.state == .unavailable)
+    }
+
+    private func makeController(
+        settings: WeatherSettings = WeatherSettings(),
+        cacheStore: WeatherForecastCacheStore? = nil,
+        provider: ForecastProvider = ForecastProvider(responses: []),
+        locationService: LocationService,
+        timer: RefreshTimer = RefreshTimer(),
+        now: @escaping @Sendable () -> Date = { Date() }
+    ) -> WeatherController {
+        let defaults = defaultsFixture().defaults
+        let settingsStore = WeatherSettingsStore(userDefaults: defaults, key: UUID().uuidString)
+        settingsStore.update(settings)
+        return WeatherController(
+            settingsStore: settingsStore,
+            cacheStore: cacheStore ?? WeatherForecastCacheStore(userDefaults: defaults, key: UUID().uuidString),
+            provider: provider,
+            locationService: locationService,
+            timer: timer,
+            now: now
+        )
+    }
+
+    private func fixtureLocation(displayName: String = "Moscow") -> WeatherLocation {
+        WeatherLocation(displayName: displayName, countryCode: "RU", latitude: 55.75, longitude: 37.62)
+    }
+
+    private func fixtureForecast(location: WeatherLocation) -> WeatherForecast {
+        WeatherForecast(
+            location: location,
+            hourly: [WeatherForecastPoint(
+                timestamp: Date(timeIntervalSince1970: 1_767_225_600),
+                temperatureCelsius: 3,
+                relativeHumidity: 70,
+                precipitationProbability: 20,
+                weatherCode: 2
+            )]
+        )
+    }
+
+    private func defaultsFixture() -> (defaults: UserDefaults, suiteName: String) {
+        let suiteName = "QuickCalTests.WeatherController.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         return (defaults, suiteName)
