@@ -130,6 +130,7 @@ enum WeatherRailPaging {
 @MainActor
 struct WeatherRailView: View {
     @ObservedObject var controller: WeatherController
+    var onRefresh: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.quickCalThemeStyle) private var themeStyle
@@ -284,7 +285,7 @@ struct WeatherRailView: View {
 
     private var refreshButton: some View {
         Button {
-            controller.refresh()
+            if let onRefresh { onRefresh() } else { controller.refresh() }
         } label: {
             if controller.isRefreshing {
                 ProgressView().controlSize(.small)

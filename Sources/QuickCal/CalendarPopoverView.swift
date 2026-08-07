@@ -288,14 +288,20 @@ struct CalendarPopoverView: View {
     private let localization = QuickCalLocalization.current
     private let onThemeChanged: (QuickCalTheme) -> Void
     private let weatherController: WeatherController?
+    private let quoteController: QuoteController?
+    private let onRefresh: (() -> Void)?
 
     init(
         themeStore: QuickCalThemeStore,
         weatherController: WeatherController? = nil,
+        quoteController: QuoteController? = nil,
+        onRefresh: (() -> Void)? = nil,
         onThemeChanged: @escaping (QuickCalTheme) -> Void
     ) {
         _themeStore = ObservedObject(wrappedValue: themeStore)
         self.weatherController = weatherController
+        self.quoteController = quoteController
+        self.onRefresh = onRefresh
         self.onThemeChanged = onThemeChanged
     }
 
@@ -367,7 +373,11 @@ struct CalendarPopoverView: View {
                 }
 
                 if let weatherController {
-                    WeatherRailView(controller: weatherController)
+                    WeatherRailView(controller: weatherController, onRefresh: onRefresh)
+                }
+
+                if let quoteController {
+                    QuoteRailView(controller: quoteController, onRefresh: onRefresh)
                 }
 
                 if let vacation = VacationCountdown.currentOrUpcoming(
@@ -442,7 +452,14 @@ struct CalendarPopoverView: View {
     private var calendarHeader: some View {
         VStack(alignment: .leading, spacing: 3) {
             monthNavigation
-            if let weatherController {
+            if let weatherController, let quoteController {
+                NetworkHeaderContextView(
+                    weatherController: weatherController,
+                    quoteController: quoteController
+                ) {
+                    headerUtilities
+                }
+            } else if let weatherController {
                 WeatherHeaderContextView(controller: weatherController) {
                     headerUtilities
                 }
@@ -609,7 +626,14 @@ struct CalendarPopoverView: View {
 
     @ViewBuilder
     private var headerUtilityPlacement: some View {
-        if let weatherController {
+        if let weatherController, let quoteController {
+            NetworkHeaderUtilityPlacement(
+                weatherController: weatherController,
+                quoteController: quoteController
+            ) {
+                headerUtilities
+            }
+        } else if let weatherController {
             WeatherHeaderUtilityPlacement(controller: weatherController) {
                 headerUtilities
             }
@@ -974,6 +998,92 @@ private struct WeatherHeaderUtilityPlacement<Controls: View>: View {
 
     var body: some View {
         if controller.headerContext == nil {
+            controls()
+        }
+    }
+}
+
+@MainActor
+private struct NetworkHeaderContextView<Controls: View>: View {
+    @ObservedObject var weatherController: WeatherController
+    @ObservedObject var quoteController: QuoteController
+    let controls: () -> Controls
+
+    @Environment(\.quickCalThemeStyle) private var themeStyle
+
+    private let localization = QuickCalLocalization.current
+
+    var body: some View {
+        if weatherController.settings.isVisible || quoteController.settings.isVisible {
+            HStack(spacing: 5) {
+                if let weather = weatherController.headerContext {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text(verbatim: weather.location.displayName)
+                        .lineLimit(1)
+                        .layoutPriority(1)
+                }
+
+                if weatherController.headerContext != nil && quoteController.settings.isVisible {
+                    separator
+                }
+
+                if quoteController.settings.isVisible {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 10, weight: .semibold))
+                        .accessibilityLabel(Text(verbatim: "MOEX"))
+                    Text(verbatim: "MOEX")
+                        .lineLimit(1)
+                }
+
+                if let fetchedAt = latestFetchedAt {
+                    separator
+                    Text(verbatim: localization.format(
+                        .weatherUpdatedFormat,
+                        Self.updatedString(fetchedAt)
+                    ))
+                    .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                controls()
+            }
+            .font(.system(
+                size: 10,
+                weight: .medium,
+                design: themeStyle.layout == .instrumentGrid ? .monospaced : themeStyle.dayFontDesign
+            ))
+            .foregroundStyle(themeStyle.secondaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 2)
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var latestFetchedAt: Date? {
+        [weatherController.lastForecastFetchedAt, quoteController.lastFetchedAt]
+            .compactMap { $0 }
+            .max()
+    }
+
+    private var separator: some View {
+        Rectangle()
+            .fill(themeStyle.dividerColor)
+            .frame(width: 1, height: 11)
+    }
+
+    private static func updatedString(_ date: Date) -> String {
+        DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short)
+    }
+}
+
+@MainActor
+private struct NetworkHeaderUtilityPlacement<Controls: View>: View {
+    @ObservedObject var weatherController: WeatherController
+    @ObservedObject var quoteController: QuoteController
+    let controls: () -> Controls
+
+    var body: some View {
+        if !weatherController.settings.isVisible && !quoteController.settings.isVisible {
             controls()
         }
     }

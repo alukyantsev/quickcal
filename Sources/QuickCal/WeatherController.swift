@@ -3,7 +3,7 @@ import Foundation
 import QuickCalKit
 
 @MainActor
-protocol WeatherRefreshScheduling: AnyObject {
+protocol ForegroundRefreshScheduling: AnyObject {
     func schedule(
         every interval: TimeInterval,
         action: @escaping @MainActor () -> Void
@@ -12,7 +12,7 @@ protocol WeatherRefreshScheduling: AnyObject {
 }
 
 @MainActor
-final class RunLoopWeatherRefreshTimer: WeatherRefreshScheduling {
+final class RunLoopForegroundRefreshTimer: ForegroundRefreshScheduling {
     private var timer: Timer?
 
     func schedule(
@@ -32,6 +32,9 @@ final class RunLoopWeatherRefreshTimer: WeatherRefreshScheduling {
         timer = nil
     }
 }
+
+typealias WeatherRefreshScheduling = ForegroundRefreshScheduling
+typealias RunLoopWeatherRefreshTimer = RunLoopForegroundRefreshTimer
 
 @MainActor
 enum WeatherPresentationState: Equatable {

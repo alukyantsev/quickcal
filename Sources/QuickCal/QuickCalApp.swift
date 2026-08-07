@@ -50,6 +50,13 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
         provider: try! OpenMeteoWeatherClient(),
         locationService: CoreLocationWeatherService()
     )
+    private let quoteController = QuoteController(
+        provider: try! MOEXISSMarketQuoteProvider()
+    )
+    private lazy var refreshCoordinator = ForegroundRefreshCoordinator(
+        weatherController: weatherController,
+        quoteController: quoteController
+    )
 
     func applicationDidFinishLaunching(
         _ notification: Notification
@@ -83,6 +90,8 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
             rootView: CalendarPopoverView(
                 themeStore: themeStore,
                 weatherController: weatherController,
+                quoteController: quoteController,
+                onRefresh: { [weak self] in self?.refreshCoordinator.refresh() },
                 onThemeChanged: { [weak self] theme in
                     guard let self else {
                         return
@@ -103,14 +112,14 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
 
         // Refresh starts with the menu bar app, not when the popover opens.
         // In manual mode this never asks macOS for location permission.
-        weatherController.startForegroundRefresh()
-        weatherController.refresh()
+        refreshCoordinator.start()
+        refreshCoordinator.refresh()
     }
 
     func applicationWillTerminate(
         _ notification: Notification
     ) {
-        weatherController.stopForegroundRefresh()
+        refreshCoordinator.stop()
     }
 
     @objc
