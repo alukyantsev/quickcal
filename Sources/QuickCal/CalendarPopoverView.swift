@@ -431,7 +431,9 @@ struct CalendarPopoverView: View {
         VStack(alignment: .leading, spacing: 3) {
             monthNavigation
             if let weatherController {
-                WeatherHeaderContextView(controller: weatherController)
+                WeatherHeaderContextView(controller: weatherController) {
+                    headerUtilities
+                }
             }
         }
         .padding(.bottom, themeStyle.usesWeekRules ? 0 : 4)
@@ -465,8 +467,7 @@ struct CalendarPopoverView: View {
             previousMonthButton
             todayButton
             nextMonthButton
-            themeMenu
-            optionsMenu
+            headerUtilityPlacement
         }
         .frame(height: 32)
         .padding(.bottom, 2)
@@ -491,8 +492,7 @@ struct CalendarPopoverView: View {
                 .strokeBorder(themeStyle.dividerColor, lineWidth: 1)
             }
 
-            themeMenu
-            optionsMenu
+            headerUtilityPlacement
         }
         .frame(height: 34)
         .padding(.bottom, 2)
@@ -519,8 +519,7 @@ struct CalendarPopoverView: View {
             Spacer(minLength: 5)
 
             todayButton
-            themeMenu
-            optionsMenu
+            headerUtilityPlacement
         }
         .frame(height: 34)
         .padding(.bottom, 2)
@@ -587,6 +586,24 @@ struct CalendarPopoverView: View {
             systemImage: "ellipsis",
             panel: .options
         )
+    }
+
+    private var headerUtilities: some View {
+        HStack(spacing: 4) {
+            themeMenu
+            optionsMenu
+        }
+    }
+
+    @ViewBuilder
+    private var headerUtilityPlacement: some View {
+        if let weatherController {
+            WeatherHeaderUtilityPlacement(controller: weatherController) {
+                headerUtilities
+            }
+        } else {
+            headerUtilities
+        }
     }
 
     private func headerPanelButton(
@@ -890,8 +907,9 @@ struct CalendarPopoverView: View {
 }
 
 @MainActor
-private struct WeatherHeaderContextView: View {
+private struct WeatherHeaderContextView<Controls: View>: View {
     @ObservedObject var controller: WeatherController
+    let controls: () -> Controls
 
     @Environment(\.quickCalThemeStyle) private var themeStyle
 
@@ -905,12 +923,16 @@ private struct WeatherHeaderContextView: View {
                 Text(verbatim: context.location.displayName)
                     .lineLimit(1)
                     .layoutPriority(1)
-                Spacer(minLength: 0)
+                Rectangle()
+                    .fill(themeStyle.dividerColor)
+                    .frame(width: 1, height: 11)
                 Text(verbatim: localization.format(
                     .weatherUpdatedFormat,
                     Self.updatedString(context.fetchedAt)
                 ))
                 .lineLimit(1)
+                Spacer(minLength: 0)
+                controls()
             }
             .font(.system(
                 size: 10,
@@ -930,5 +952,17 @@ private struct WeatherHeaderContextView: View {
             dateStyle: .none,
             timeStyle: .short
         )
+    }
+}
+
+@MainActor
+private struct WeatherHeaderUtilityPlacement<Controls: View>: View {
+    @ObservedObject var controller: WeatherController
+    let controls: () -> Controls
+
+    var body: some View {
+        if controller.headerContext == nil {
+            controls()
+        }
     }
 }
