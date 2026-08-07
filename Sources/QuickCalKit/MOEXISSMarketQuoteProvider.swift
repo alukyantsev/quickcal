@@ -173,9 +173,9 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
         if assetCode == "EURUSD" || row.string("SHORTNAME")?.uppercased().contains("EUR/USD") == true {
             return true
         }
-        return secid.hasPrefix("Eu")
-            && assetCode == "EU"
-            && row.string("SHORTNAME")?.uppercased().hasPrefix("EU-") == true
+        return secid.hasPrefix("ED")
+            && assetCode == "ED"
+            && row.string("SHORTNAME")?.uppercased().hasPrefix("ED-") == true
     }
 
     private func absoluteChange(price: Double, percentage: Double) -> Double? {

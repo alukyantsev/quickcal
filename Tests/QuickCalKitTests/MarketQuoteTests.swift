@@ -134,13 +134,13 @@ struct MOEXISSMarketQuoteProviderTests {
     }
 
     @Test
-    func findsTheActiveEuroDollarContractUsingTheCurrentMOEXEuInstrumentCode() async throws {
+    func findsTheActiveEuroDollarContractUsingTheCurrentMOEXEDInstrumentCode() async throws {
         let recorder = RequestRecorder(responses: [
             HTTPDataResponse(data: Data("""
-            {"securities":{"columns":["SECID","SHORTNAME","ASSETCODE","LASTTRADEDATE"],"data":[["EuU6","Eu-9.26","Eu","2026-09-17"],["EuM6","Eu-6.26","Eu","2026-06-18"]]}}
+            {"securities":{"columns":["SECID","SHORTNAME","ASSETCODE","LASTTRADEDATE"],"data":[["EDU6","ED-9.26","ED","2026-09-17"],["EDM6","ED-6.26","ED","2026-06-18"]]}}
             """.utf8), statusCode: 200),
             HTTPDataResponse(data: Data("""
-            {"marketdata":{"columns":["SECID","LAST","LASTTOPREVPRICE","TRADEDATE"],"data":[["EuU6",1.164,0.35,"2026-08-08"]]}}
+            {"marketdata":{"columns":["SECID","LAST","LASTTOPREVPRICE","TRADEDATE"],"data":[["EDU6",1.164,0.35,"2026-08-08"]]}}
             """.utf8), statusCode: 200),
         ])
         let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
@@ -154,7 +154,7 @@ struct MOEXISSMarketQuoteProviderTests {
         #expect(quote.changePercent == 0.35)
         #expect(quote.change > 0)
         let requests = await recorder.requests
-        #expect(requests[1].url?.path == "/iss/engines/futures/markets/forts/securities/EuU6.json")
+        #expect(requests[1].url?.path == "/iss/engines/futures/markets/forts/securities/EDU6.json")
     }
 
     @Test
