@@ -8,6 +8,8 @@ struct QuoteRailView: View {
 
     @Environment(\.quickCalThemeStyle) private var themeStyle
 
+    private let localization = QuickCalLocalization.current
+
     var body: some View {
         Group {
             if controller.settings.isVisible {
@@ -41,13 +43,16 @@ struct QuoteRailView: View {
                 quoteRow(quote)
             }
             if let dataDate = quotes.map(\.dataDate).max() {
-                Text(verbatim: "Данные на \(Self.dataDateString(dataDate))")
+                Text(verbatim: localization.format(.marketDataAsOfFormat, dataDateString(dataDate)))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(themeStyle.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 2)
                     .padding(.top, 2)
-                    .accessibilityLabel(Text(verbatim: "Дата рыночных данных: \(Self.dataDateString(dataDate))"))
+                    .accessibilityLabel(Text(verbatim: localization.format(
+                        .marketDataDateAccessibilityFormat,
+                        dataDateString(dataDate)
+                    )))
             }
         }
         .padding(.top, themeStyle.usesWeekRules ? 5 : 3)
@@ -55,7 +60,17 @@ struct QuoteRailView: View {
 
     private func quoteRow(_ quote: MarketQuote) -> some View {
         let direction = quote.change == 0 ? "→" : quote.change > 0 ? "↑" : "↓"
-        let change = String(format: "%@%.2f%%", quote.change >= 0 ? "+" : "", quote.changePercent)
+        let directionAccessibility = quote.change == 0
+            ? localization.string(.marketDirectionUnchanged)
+            : quote.change > 0
+                ? localization.string(.marketDirectionUp)
+                : localization.string(.marketDirectionDown)
+        let change = String(
+            format: "%@%.2f%%",
+            locale: localization.locale,
+            quote.change >= 0 ? "+" : "",
+            quote.changePercent
+        )
         return HStack(spacing: 6) {
             Text(verbatim: quote.displayName)
                 .lineLimit(1)
@@ -71,25 +86,33 @@ struct QuoteRailView: View {
         .foregroundStyle(themeStyle.primaryText)
         .frame(maxWidth: .infinity, minHeight: 20)
         .padding(.horizontal, 2)
-        .accessibilityLabel(Text(verbatim: "\(quote.displayName), \(Self.priceString(quote.price)), \(direction) \(String(format: "%.2f", quote.change)), \(change), \(Self.dataDateString(quote.dataDate))"))
+        .accessibilityLabel(Text(verbatim: localization.format(
+            .marketQuoteAccessibilityFormat,
+            quote.displayName,
+            Self.priceString(quote.price),
+            directionAccessibility,
+            String(format: "%.2f", locale: localization.locale, quote.change),
+            change,
+            dataDateString(quote.dataDate)
+        )))
     }
 
     private var loading: some View {
         HStack(spacing: 7) {
             ProgressView().controlSize(.small)
-            Text(verbatim: "Загрузка котировок MOEX")
+            Text(verbatim: localization.string(.marketLoading))
             Spacer(minLength: 0)
         }
         .font(.system(size: 11, weight: .medium))
         .foregroundStyle(themeStyle.secondaryText)
         .padding(.top, themeStyle.usesWeekRules ? 5 : 3)
-        .accessibilityLabel(Text(verbatim: "Загрузка котировок MOEX"))
+        .accessibilityLabel(Text(verbatim: localization.string(.marketLoading)))
     }
 
     private func unavailable(failedTickers: [String]) -> some View {
         HStack(spacing: 7) {
             Image(systemName: "chart.line.downtrend.xyaxis")
-            Text(verbatim: "MOEX недоступен")
+            Text(verbatim: localization.string(.marketUnavailable))
             Spacer(minLength: 0)
             retryButton
         }
@@ -102,7 +125,7 @@ struct QuoteRailView: View {
 
     private var empty: some View {
         HStack(spacing: 7) {
-            Text(verbatim: "Добавьте тикеры в настройках")
+            Text(verbatim: localization.string(.marketEmpty))
                 .lineLimit(1)
             Spacer(minLength: 0)
             retryButton
@@ -111,22 +134,26 @@ struct QuoteRailView: View {
         .foregroundStyle(themeStyle.secondaryText)
         .padding(.top, themeStyle.usesWeekRules ? 5 : 3)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: "Список котировок пуст. Добавьте тикеры в настройках котировок или повторите обновление."))
+        .accessibilityLabel(Text(verbatim: localization.string(.marketEmptyAccessibility)))
     }
 
     private func staleNotice(fetchedAt: Date, failedTickers: [String]) -> some View {
         notice(
-            "Показаны сохранённые данные от \(Self.dataDateString(fetchedAt))",
+            localization.format(.marketStaleFormat, dataDateString(fetchedAt)),
             accessibility: failedTickers.isEmpty
-                ? "Показаны устаревшие сохранённые данные от \(Self.dataDateString(fetchedAt))."
-                : "Показаны устаревшие сохранённые данные. \(errorAccessibilityText(for: failedTickers))"
+                ? localization.format(.marketStaleAccessibilityFormat, dataDateString(fetchedAt))
+                : "\(localization.format(.marketStaleAccessibilityFormat, dataDateString(fetchedAt))) \(errorAccessibilityText(for: failedTickers))"
         )
     }
 
     private func partialNotice(fetchedAt: Date, failedTickers: [String]) -> some View {
         notice(
-            "Не загружены: \(failedTickers.joined(separator: ", "))",
-            accessibility: "Часть котировок загружена. \(errorAccessibilityText(for: failedTickers)) Данные обновлены \(Self.dataDateString(fetchedAt))."
+            localization.format(.marketPartialFormat, failedTickers.joined(separator: ", ")),
+            accessibility: localization.format(
+                .marketPartialAccessibilityFormat,
+                errorAccessibilityText(for: failedTickers),
+                dataDateString(fetchedAt)
+            )
         )
     }
 
@@ -148,10 +175,10 @@ struct QuoteRailView: View {
     }
 
     private var retryButton: some View {
-        Button("Обновить") { refresh() }
+        Button(localization.string(.marketRetry)) { refresh() }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(verbatim: "Повторить загрузку котировок MOEX"))
-            .accessibilityHint(Text(verbatim: "Повторно загружает котировки из MOEX"))
+            .accessibilityLabel(Text(verbatim: localization.string(.marketRetryAccessibility)))
+            .accessibilityHint(Text(verbatim: localization.string(.marketRetryHint)))
     }
 
     private func refresh() {
@@ -159,8 +186,11 @@ struct QuoteRailView: View {
     }
 
     private func errorAccessibilityText(for failedTickers: [String]) -> String {
-        guard !failedTickers.isEmpty else { return "Котировки MOEX недоступны." }
-        return "Не удалось загрузить тикеры: \(failedTickers.joined(separator: ", "))."
+        guard !failedTickers.isEmpty else { return localization.string(.marketErrorAccessibility) }
+        return localization.format(
+            .marketFailedTickersAccessibilityFormat,
+            failedTickers.joined(separator: ", ")
+        )
     }
 
     private func changeColor(for change: Double) -> Color {
@@ -177,7 +207,11 @@ struct QuoteRailView: View {
         return formatter.string(from: NSNumber(value: price)) ?? "\(price)"
     }
 
-    private static func dataDateString(_ date: Date) -> String {
-        DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .none)
+    private func dataDateString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = localization.locale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
     }
 }

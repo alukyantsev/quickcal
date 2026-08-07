@@ -280,10 +280,12 @@ private struct MarketQuoteOptionsView: View {
     @State private var tickerInput = ""
     @FocusState private var isTickerFieldFocused: Bool
 
+    private let localization = QuickCalLocalization.current
+
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Toggle(
-                "Показывать котировки",
+                localization.string(.marketVisibility),
                 isOn: Binding(
                     get: { controller.settings.isVisible },
                     set: { controller.setVisibility($0) }
@@ -296,12 +298,12 @@ private struct MarketQuoteOptionsView: View {
             .frame(height: 29)
 
             if controller.settings.isVisible {
-                Text(verbatim: "Тикеры через запятую")
+                Text(verbatim: localization.string(.marketTickers))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(themeStyle.primaryText)
                     .padding(.horizontal, 7)
 
-                TextField("USDRUBF, EURRUBF, EUR/USD, IMOEX", text: $tickerInput)
+                TextField(localization.string(.marketTickersPlaceholder), text: $tickerInput)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 12))
                     .padding(.horizontal, 7)
@@ -310,15 +312,21 @@ private struct MarketQuoteOptionsView: View {
                     .onChange(of: isTickerFieldFocused) { _, focused in
                         if !focused { commitTickers() }
                     }
-                    .accessibilityLabel(Text(verbatim: "Тикеры котировок через запятую"))
-                    .accessibilityHint(Text(verbatim: "Изменения сохраняются по Enter или после ухода из поля"))
+                    .accessibilityLabel(Text(verbatim: localization.string(.marketTickersAccessibilityLabel)))
+                    .accessibilityHint(Text(verbatim: localization.string(.marketTickersAccessibilityHint)))
 
                 if !controller.failedTickers.isEmpty {
-                    Text(verbatim: "Неизвестны или недоступны: \(controller.failedTickers.joined(separator: ", "))")
+                    Text(verbatim: localization.format(
+                        .marketFailedTickersFormat,
+                        controller.failedTickers.joined(separator: ", ")
+                    ))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(themeStyle.secondaryText)
                         .padding(.horizontal, 7)
-                        .accessibilityLabel(Text(verbatim: "Неизвестные или недоступные тикеры: \(controller.failedTickers.joined(separator: ", "))"))
+                        .accessibilityLabel(Text(verbatim: localization.format(
+                            .marketFailedTickersAccessibilityFormat,
+                            controller.failedTickers.joined(separator: ", ")
+                        )))
                 }
             }
         }

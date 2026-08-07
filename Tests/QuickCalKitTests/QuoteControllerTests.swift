@@ -137,8 +137,10 @@ struct QuoteControllerTests {
         #expect(await quoteProvider.requestedTickers() == MarketQuoteSettings.defaultTickers)
     }
 
-    @Test
-    func quoteRailRendersTheDefaultRowsWithoutASectionTitle() async throws {
+    @Test(arguments: QuickCalTheme.allCases)
+    func quoteRailRendersTheDefaultRowsInEveryThemeWithoutASectionTitle(
+        theme: QuickCalTheme
+    ) async throws {
         let fixture = defaultsFixture()
         defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
         let controller = QuoteController(
@@ -149,7 +151,7 @@ struct QuoteControllerTests {
         await controller.refreshNow()
 
         let view = QuoteRailView(controller: controller)
-            .environment(\.quickCalThemeStyle, QuickCalThemeStyle(theme: .systemLight))
+            .environment(\.quickCalThemeStyle, QuickCalThemeStyle(theme: theme))
             .frame(width: 320)
         let image = try #require(ImageRenderer(content: view).nsImage)
 

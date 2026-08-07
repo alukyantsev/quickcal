@@ -34,6 +34,13 @@ struct LocalizationTests {
         #expect(localization.string(.weatherLocating) == "Определяем текущее местоположение…")
         #expect(localization.string(.weatherLocationUnavailable) == "Не удалось определить местоположение.")
         #expect(localization.string(.weatherRetryLocation) == "Повторить")
+        #expect(localization.string(.marketVisibility) == "Показывать котировки")
+        #expect(localization.string(.marketTickers) == "Тикеры через запятую")
+        #expect(localization.string(.marketLoading) == "Загрузка котировок MOEX")
+        #expect(localization.string(.marketUnavailable) == "MOEX недоступен")
+        #expect(localization.string(.marketRetryAccessibility) == "Повторить загрузку котировок MOEX")
+        #expect(localization.string(.marketDirectionUp) == "рост")
+        #expect(localization.format(.marketPartialFormat, "UNKNOWN") == "Не загружены: UNKNOWN")
         #expect(localization.format(.weekNumberFormat, 31) == "Неделя 31")
     }
 
@@ -69,6 +76,13 @@ struct LocalizationTests {
         #expect(localization.string(.weatherLocating) == "Determining current location…")
         #expect(localization.string(.weatherLocationUnavailable) == "Could not determine the current location.")
         #expect(localization.string(.weatherRetryLocation) == "Try again")
+        #expect(localization.string(.marketVisibility) == "Show quotes")
+        #expect(localization.string(.marketTickers) == "Comma-separated tickers")
+        #expect(localization.string(.marketLoading) == "Loading MOEX quotes")
+        #expect(localization.string(.marketUnavailable) == "MOEX is unavailable")
+        #expect(localization.string(.marketRetryAccessibility) == "Retry loading MOEX quotes")
+        #expect(localization.string(.marketDirectionDown) == "down")
+        #expect(localization.format(.marketPartialFormat, "UNKNOWN") == "Not loaded: UNKNOWN")
         #expect(localization.format(.weekNumberFormat, 31) == "Week 31")
     }
 
