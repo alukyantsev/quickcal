@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-07T00:00:00+03:00",
+  "generatedAt": "2026-08-07T21:15:03Z",
   "title": "Design System: QuickCal",
   "extensions": {
     "colorMeta": {
@@ -108,9 +108,9 @@
       "name": "Options Popup",
       "kind": "custom",
       "refersTo": "popup-panel",
-      "description": "Ellipsis-панель только для Week Numbers, Autostart и Quit.",
-      "html": "<section class=\"ds-options-popup\"><button>☑ Week Numbers</button><button>☐ Autostart</button><hr><button>⏻ Quit QuickCal</button></section>",
-      "css": ".ds-options-popup { width:204px; padding:7px; color:#202124; background:#FFF; border:1px solid rgba(0,0,0,.12); border-radius:10px; box-shadow:0 7px 28px rgba(0,0,0,.18); font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-options-popup button { width:100%; height:29px; padding:0 7px; border:0; border-radius:6px; text-align:left; color:inherit; background:transparent; font-size:13px; } .ds-options-popup button:hover { background:rgba(0,0,0,.055); } .ds-options-popup button:focus-visible { outline:2px solid #247BF2; outline-offset:-1px; } .ds-options-popup button:active { background:rgba(0,0,0,.1); } .ds-options-popup hr { margin:2px 0; border:0; border-top:1px solid rgba(0,0,0,.12); }"
+      "description": "Ellipsis-панель с настройками календаря и погоды; цвета, текст и divider наследуют активную тему.",
+      "html": "<section class=\"ds-options-popup\"><button>☑ Week Numbers</button><button>☐ Autostart</button><hr><button>☑ Show weather</button><button>⌖ Automatic location</button><div class=\"ds-interval\"><button class=\"ds-active\">4h</button><button>8h</button><button>12h</button></div><hr><button>⏻ Quit QuickCal</button></section>",
+      "css": ".ds-options-popup { width:204px; padding:7px; color:#F2F5F6; background:#2B3942; border:1px solid rgba(242,245,246,.16); border-radius:10px; box-shadow:0 7px 28px rgba(0,0,0,.42); font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-options-popup button { width:100%; min-height:29px; padding:0 7px; border:0; border-radius:6px; text-align:left; color:inherit; background:transparent; font-size:13px; } .ds-options-popup button:hover { background:rgba(255,255,255,.07); } .ds-options-popup button:focus-visible { outline:2px solid #FF8066; outline-offset:-1px; } .ds-options-popup button:active { background:rgba(255,255,255,.12); } .ds-options-popup hr { margin:2px 0; border:0; border-top:1px solid rgba(242,245,246,.16); } .ds-options-popup .ds-interval { display:flex; gap:4px; padding:4px 7px; } .ds-options-popup .ds-interval button { text-align:center; min-height:24px; } .ds-options-popup .ds-interval .ds-active { color:#1F2C34; background:#FF8066; }"
     },
     {
       "name": "Calendar State Priority",
@@ -126,6 +126,13 @@
       "description": "Связанный диапазон внутри одной недели с округлёнными внешними и прямыми внутренними краями.",
       "html": "<div class=\"ds-range\" role=\"group\" aria-label=\"Selected dates\"><button>28</button><button>29</button><button>30</button></div>",
       "css": ".ds-range { display:flex; gap:0; font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-range button { width:38px; height:31px; padding:0; border:0; border-radius:0; color:#171A20; background:#DCEAFF; font-size:17px; font-variant-numeric:tabular-nums; transition:filter 120ms ease-out; } .ds-range button:first-child { border-radius:16px 0 0 16px; } .ds-range button:last-child { border-radius:0 16px 16px 0; } .ds-range button:hover { filter:saturate(1.15); } .ds-range button:focus-visible { position:relative; z-index:1; outline:2px solid #247BF2; outline-offset:-1px; } .ds-range button:active { filter:brightness(.94); }"
+    },
+    {
+      "name": "Weather Forecast Rail",
+      "kind": "custom",
+      "description": "Постоянно раскрытая лента из четырёх погодных периодов с локальными датами, измерениями и постраничной навигацией.",
+      "html": "<section class=\"ds-weather-rail\"><header><span>⌖ Moscow</span><button aria-label=\"Next weather periods\">›</button></header><div class=\"ds-weather-days\"><span>SAT, 8 AUG</span><span>SUN, 9 AUG</span></div><div class=\"ds-weather-periods\"><article><b>19:00</b><i>☾</i><strong>+18°</strong><small>70% · 10%</small></article><article><b>23:00</b><i>☾</i><strong>+16°</strong><small>74% · 10%</small></article><article><b>03:00</b><i>☾</i><strong>+14°</strong><small>78% · 20%</small></article><article><b>07:00</b><i>☀</i><strong>+15°</strong><small>72% · 10%</small></article></div></section>",
+      "css": ".ds-weather-rail { width:322px; color:#F2F5F6; font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-weather-rail header { display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#BDC8CC; } .ds-weather-rail header button { width:20px; height:28px; border:0; border-radius:14px; color:#F2F5F6; background:rgba(255,255,255,.09); } .ds-weather-days { display:grid; grid-template-columns:2fr 2fr; height:12px; color:#BDC8CC; font:600 9px ui-monospace,SFMono-Regular,monospace; } .ds-weather-periods { display:grid; grid-template-columns:repeat(4,1fr); } .ds-weather-periods article { display:grid; justify-items:center; gap:2px; min-height:82px; border-right:1px solid rgba(242,245,246,.16); font-variant-numeric:tabular-nums; } .ds-weather-periods article:last-child { border-right:0; } .ds-weather-periods b,.ds-weather-periods strong { font-size:12px; } .ds-weather-periods i { font-style:normal; font-size:16px; } .ds-weather-periods small { color:#BDC8CC; font:500 9px ui-monospace,SFMono-Regular,monospace; }"
     }
   ],
   "narrative": {
