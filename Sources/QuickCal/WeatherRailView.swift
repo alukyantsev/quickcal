@@ -50,6 +50,38 @@ struct WeatherDisplayPeriod: Equatable, Identifiable {
     }
 }
 
+struct WeatherDayGroup: Equatable, Identifiable {
+    let day: Date
+    let periodCount: Int
+
+    var id: Date { day }
+
+    static func make(
+        from periods: [WeatherDisplayPeriod],
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [WeatherDayGroup] {
+        periods.reduce(into: []) { groups, period in
+            let day = calendar.startOfDay(for: period.point.timestamp)
+            if let last = groups.last, last.day == day {
+                groups[groups.count - 1] = WeatherDayGroup(
+                    day: day,
+                    periodCount: last.periodCount + 1
+                )
+            } else {
+                groups.append(WeatherDayGroup(day: day, periodCount: 1))
+            }
+        }
+    }
+
+    static func title(for day: Date, locale: Locale) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.setLocalizedDateFormatFromTemplate("EEE d MMM")
+        return formatter.string(from: day).uppercased(with: locale)
+    }
+}
+
 @MainActor
 struct WeatherRailView: View {
     @ObservedObject var controller: WeatherController
@@ -117,16 +149,37 @@ struct WeatherRailView: View {
             let lastStartIndex = max(0, periods.count - 4)
             let startIndex = min(firstVisibleIndex, lastStartIndex)
             let visiblePeriods = Array(periods.dropFirst(startIndex).prefix(4))
+            let dayGroups = WeatherDayGroup.make(from: visiblePeriods)
 
-            ZStack(alignment: .center) {
-                HStack(spacing: 0) {
-                    ForEach(Array(visiblePeriods.enumerated()), id: \.element.id) { index, period in
-                        WeatherPeriodCell(
-                            period: period,
-                            localization: localization,
-                            showsTrailingDivider: index < visiblePeriods.count - 1
-                        )
-                        .frame(width: geometry.size.width / 4)
+            ZStack(alignment: .bottom) {
+                VStack(spacing: 2) {
+                    HStack(spacing: 0) {
+                        ForEach(dayGroups) { group in
+                            Text(verbatim: WeatherDayGroup.title(
+                                for: group.day,
+                                locale: localization.locale
+                            ))
+                            .font(dayLabelFont)
+                            .foregroundStyle(microTextColor)
+                            .lineLimit(1)
+                            .frame(
+                                width: geometry.size.width
+                                    * CGFloat(group.periodCount) / 4,
+                                alignment: .leading
+                            )
+                        }
+                    }
+                    .frame(height: 12)
+
+                    HStack(spacing: 0) {
+                        ForEach(Array(visiblePeriods.enumerated()), id: \.element.id) { index, period in
+                            WeatherPeriodCell(
+                                period: period,
+                                localization: localization,
+                                showsTrailingDivider: index < visiblePeriods.count - 1
+                            )
+                            .frame(width: geometry.size.width / 4)
+                        }
                     }
                 }
 
@@ -154,7 +207,7 @@ struct WeatherRailView: View {
                 }
             }
         }
-        .frame(height: 82)
+        .frame(height: 96)
         .onChange(of: controller.settings.interval) { _, _ in
             firstVisibleIndex = 0
         }
@@ -214,6 +267,14 @@ struct WeatherRailView: View {
         .system(
             size: 10,
             weight: .medium,
+            design: themeStyle.layout == .instrumentGrid ? .monospaced : themeStyle.dayFontDesign
+        )
+    }
+
+    private var dayLabelFont: Font {
+        .system(
+            size: 9,
+            weight: .semibold,
             design: themeStyle.layout == .instrumentGrid ? .monospaced : themeStyle.dayFontDesign
         )
     }

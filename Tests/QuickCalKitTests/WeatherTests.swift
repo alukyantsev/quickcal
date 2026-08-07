@@ -498,6 +498,36 @@ struct WeatherControllerTests {
 
 @Suite
 struct WeatherRailPresentationTests {
+    @Test
+    func groupsVisiblePeriodsByLocalCalendarDay() {
+        let timeZone = TimeZone(secondsFromGMT: 10 * 3_600)!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let saturdayAtTenPM = calendar.date(from: DateComponents(
+            year: 2026,
+            month: 1,
+            day: 3,
+            hour: 22
+        ))!
+        let periods = [0, 2, 4, 6].map { hour in
+            WeatherDisplayPeriod(point: WeatherForecastPoint(
+                timestamp: saturdayAtTenPM.addingTimeInterval(Double(hour) * 3_600),
+                temperatureCelsius: 0,
+                relativeHumidity: 60,
+                precipitationProbability: 0,
+                weatherCode: 0
+            ))
+        }
+
+        let groups = WeatherDayGroup.make(from: periods, calendar: calendar)
+
+        #expect(groups.map(\.periodCount) == [1, 3])
+        #expect(groups.map(\.day) == [
+            calendar.startOfDay(for: periods[0].point.timestamp),
+            calendar.startOfDay(for: periods[1].point.timestamp),
+        ])
+    }
+
     @Test(arguments: WeatherInterval.allCases)
     func intervalSelectsActualForecastPoints(interval: WeatherInterval) throws {
         let start = Date(timeIntervalSince1970: 1_767_225_600)
