@@ -42,6 +42,9 @@
 "weather.location" = "Weather location";
 "weather.search_location" = "Search city";
 "weather.automatic_location" = "Use current location automatically";
+"weather.locating" = "Determining current location…";
+"weather.location_unavailable" = "Could not determine the current location.";
+"weather.retry_location" = "Try again";
 "weather.interval" = "Forecast interval";
 "weather.refresh" = "Refresh forecast";
 "weather.refreshing" = "Refreshing forecast";

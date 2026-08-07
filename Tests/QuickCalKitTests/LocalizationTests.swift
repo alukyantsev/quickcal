@@ -31,6 +31,9 @@ struct LocalizationTests {
         #expect(localization.string(.weatherVisibility) == "Показывать погоду")
         #expect(localization.string(.weatherUnavailable) == "Прогноз временно недоступен")
         #expect(localization.string(.weatherRefresh) == "Обновить прогноз")
+        #expect(localization.string(.weatherLocating) == "Определяем текущее местоположение…")
+        #expect(localization.string(.weatherLocationUnavailable) == "Не удалось определить местоположение.")
+        #expect(localization.string(.weatherRetryLocation) == "Повторить")
         #expect(localization.format(.weekNumberFormat, 31) == "Неделя 31")
     }
 
@@ -63,6 +66,9 @@ struct LocalizationTests {
         #expect(localization.string(.weatherVisibility) == "Show weather")
         #expect(localization.string(.weatherUnavailable) == "Forecast is temporarily unavailable")
         #expect(localization.string(.weatherRefresh) == "Refresh forecast")
+        #expect(localization.string(.weatherLocating) == "Determining current location…")
+        #expect(localization.string(.weatherLocationUnavailable) == "Could not determine the current location.")
+        #expect(localization.string(.weatherRetryLocation) == "Try again")
         #expect(localization.format(.weekNumberFormat, 31) == "Week 31")
     }
 

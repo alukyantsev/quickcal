@@ -42,6 +42,14 @@ enum WeatherPresentationState: Equatable {
 }
 
 @MainActor
+enum AutomaticLocationStatus: Equatable {
+    case inactive
+    case awaitingAuthorization
+    case locating
+    case unavailable
+}
+
+@MainActor
 final class WeatherController: ObservableObject {
     static let foregroundRefreshInterval: TimeInterval = 30 * 60
     static let freshCacheLifetime: TimeInterval = 30 * 60
@@ -50,6 +58,7 @@ final class WeatherController: ObservableObject {
     @Published private(set) var state: WeatherPresentationState
     @Published private(set) var settings: WeatherSettings
     @Published private(set) var isRefreshing = false
+    @Published private(set) var automaticLocationStatus: AutomaticLocationStatus = .inactive
 
     private let settingsStore: WeatherSettingsStore
     private let cacheStore: WeatherForecastCacheStore
@@ -116,9 +125,15 @@ final class WeatherController: ObservableObject {
         persist(updated)
 
         guard isEnabled else {
+            automaticLocationStatus = .inactive
             refresh()
             return
         }
+        requestAutomaticLocationIfAuthorized()
+    }
+
+    func retryAutomaticLocation() {
+        guard settings.locationMode == .automatic else { return }
         requestAutomaticLocationIfAuthorized()
     }
 
@@ -162,10 +177,12 @@ final class WeatherController: ObservableObject {
         guard settings.locationMode == .automatic else { return }
         switch status {
         case .authorized:
+            automaticLocationStatus = .locating
             refresh()
         case .notDetermined:
             break
         case .denied, .restricted:
+            automaticLocationStatus = .unavailable
             refreshFallbackForecast()
         }
     }
@@ -177,11 +194,14 @@ final class WeatherController: ObservableObject {
     private func requestAutomaticLocationIfAuthorized() {
         switch locationService.authorizationStatus {
         case .notDetermined:
+            automaticLocationStatus = .awaitingAuthorization
             locationService.requestAuthorization()
             updatePresentationFromCache()
         case .authorized:
+            automaticLocationStatus = .locating
             refresh()
         case .denied, .restricted:
+            automaticLocationStatus = .unavailable
             refreshFallbackForecast()
         }
     }
@@ -207,9 +227,12 @@ final class WeatherController: ObservableObject {
                 var updated = settings
                 updated.automaticLocation = automaticLocation
                 persist(updated)
+                automaticLocationStatus = .inactive
                 location = automaticLocation
             } catch {
-                // A previous automatic or manual selection remains the fallback.
+                // A previous automatic or manual selection remains the fallback,
+                // but the options UI must not present that fallback as a success.
+                automaticLocationStatus = .unavailable
                 location = settings.resolvedLocation
             }
         }

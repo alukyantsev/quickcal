@@ -42,6 +42,9 @@
 "weather.location" = "Место прогноза";
 "weather.search_location" = "Найти город";
 "weather.automatic_location" = "Определять место автоматически";
+"weather.locating" = "Определяем текущее местоположение…";
+"weather.location_unavailable" = "Не удалось определить местоположение.";
+"weather.retry_location" = "Повторить";
 "weather.interval" = "Интервал прогноза";
 "weather.refresh" = "Обновить прогноз";
 "weather.refreshing" = "Обновляем прогноз";

@@ -151,7 +151,7 @@ struct WeatherRailView: View {
             let visiblePeriods = Array(periods.dropFirst(startIndex).prefix(4))
             let dayGroups = WeatherDayGroup.make(from: visiblePeriods)
 
-            ZStack(alignment: .bottom) {
+            ZStack {
                 VStack(spacing: 2) {
                     HStack(spacing: 0) {
                         ForEach(dayGroups) { group in
@@ -196,6 +196,9 @@ struct WeatherRailView: View {
                         }
                     }
                 }
+                // The day-label row sits above the cards. Offset only the
+                // overlay so arrows stay on the cards' vertical centre.
+                .offset(y: 7)
             }
             .background {
                 WeatherRailWheelPager { direction in

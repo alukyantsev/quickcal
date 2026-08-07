@@ -66,10 +66,8 @@ private struct WeatherOptionsView: View {
             .foregroundStyle(themeStyle.primaryText)
             .padding(.horizontal, 7)
 
-        if controller.settings.locationMode == .automatic,
-           let location = controller.settings.automaticLocation
-        {
-            currentLocationRow(location)
+        if controller.settings.locationMode == .automatic {
+            automaticLocationControls
         } else {
             TextField(
                 localization.string(.weatherSearchLocation),
@@ -112,6 +110,52 @@ private struct WeatherOptionsView: View {
                     } ?? location.displayName))
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var automaticLocationControls: some View {
+        if let location = controller.settings.automaticLocation {
+            currentLocationRow(location)
+        } else {
+            HStack(spacing: 6) {
+                if controller.automaticLocationStatus == .locating
+                    || controller.automaticLocationStatus == .awaitingAuthorization
+                {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Image(systemName: "location.slash")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                Text(verbatim: automaticLocationMessage)
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+                if controller.automaticLocationStatus == .unavailable {
+                    Button {
+                        controller.retryAutomaticLocation()
+                    } label: {
+                        Text(verbatim: localization.string(.weatherRetryLocation))
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(themeStyle.primaryText)
+                }
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(themeStyle.primaryText)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var automaticLocationMessage: String {
+        switch controller.automaticLocationStatus {
+        case .unavailable:
+            localization.string(.weatherLocationUnavailable)
+        case .inactive, .awaitingAuthorization, .locating:
+            localization.string(.weatherLocating)
         }
     }
 

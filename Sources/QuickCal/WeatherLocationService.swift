@@ -47,6 +47,9 @@ final class CoreLocationWeatherService: NSObject, WeatherLocationServicing {
     }
 
     func currentLocation() async throws -> WeatherLocation {
+        guard CLLocationManager.locationServicesEnabled() else {
+            throw ServiceError.locationUnavailable
+        }
         let location = try await withCheckedThrowingContinuation { continuation in
             locationContinuation = continuation
             manager.requestLocation()
@@ -75,6 +78,17 @@ extension CoreLocationWeatherService: CLLocationManagerDelegate {
     nonisolated func locationManagerDidChangeAuthorization(
         _ manager: CLLocationManager
     ) {
+        notifyAuthorizationChange(for: manager)
+    }
+
+    nonisolated func locationManager(
+        _ manager: CLLocationManager,
+        didChangeAuthorization status: CLAuthorizationStatus
+    ) {
+        notifyAuthorizationChange(for: manager)
+    }
+
+    private nonisolated func notifyAuthorizationChange(for manager: CLLocationManager) {
         Task { @MainActor [weak self] in
             let status = WeatherLocationAuthorization(manager.authorizationStatus)
             self?.authorizationStatusChanged?(status)

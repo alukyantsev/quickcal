@@ -309,6 +309,7 @@ struct WeatherControllerTests {
         #expect(controller.settings.automaticLocation == automatic)
         #expect(controller.state == .fresh(forecast))
         #expect(service.locationRequestCount == 1)
+        #expect(controller.automaticLocationStatus == .inactive)
         #expect(await provider.latestRequestedLocation() == automatic)
     }
 
@@ -415,6 +416,7 @@ struct WeatherControllerTests {
         #expect(service.locationRequestCount == 1)
         #expect(await provider.latestRequestedLocation() == manual)
         #expect(controller.state == .fresh(forecast))
+        #expect(controller.automaticLocationStatus == .unavailable)
     }
 
     @Test
