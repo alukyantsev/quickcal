@@ -1,0 +1,6 @@
+{
+  "name": "Instrument Grid",
+  "image": "quickcal-instrument-grid.png",
+  "approved": false,
+  "prompt": "QuickCal precise instrument grid composition: month code header, segmented navigation, left coordinate rail, matte keylines, signal states, compact command rail"
+}

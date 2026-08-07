@@ -62,12 +62,39 @@ struct CalendarDayCell: View {
                             .fill(Color.white.opacity(0.10))
                             .frame(width: indicatorSize, height: indicatorSize)
                     }
+
+                    if isSelected {
+                        RoundedRectangle(
+                            cornerRadius: themeStyle.dayCornerRadius + 2,
+                            style: .continuous
+                        )
+                        .strokeBorder(
+                            themeStyle.selectionColor,
+                            lineWidth: 2
+                        )
+                        .frame(
+                            width: indicatorSize + 4,
+                            height: indicatorSize + 4
+                        )
+                    }
                 }
 
                 Text(day.number, format: .number)
-                    .font(.system(size: 17))
+                    .font(.system(
+                        size: 17,
+                        design: themeStyle.dayFontDesign
+                    ))
+                    .monospacedDigit()
                     .fontWeight(isNonWorking ? .semibold : .regular)
                     .foregroundStyle(dayTextColor)
+
+                if isSelected && isNonWorking {
+                    Capsule()
+                        .fill(themeStyle.weekendColor)
+                        .frame(width: 10, height: 2)
+                        .offset(y: 11)
+                        .accessibilityHidden(true)
+                }
             }
             .frame(width: cellSize, height: cellSize)
             .contentShape(Rectangle())
@@ -103,7 +130,11 @@ struct CalendarDayCell: View {
             )
             .fill(
                 themeStyle.selectionColor
-                    .opacity(isHovered ? 1 : 0.88)
+                    .opacity(
+                        isHovered
+                            ? min(1, themeStyle.selectionOpacity + 0.08)
+                            : themeStyle.selectionOpacity
+                    )
             )
             .frame(
                 width: cellSize
@@ -135,13 +166,14 @@ struct CalendarDayCell: View {
         if isSelected {
             return themeStyle.selectedText
         }
+        if !day.isInDisplayedMonth {
+            return themeStyle.secondaryText
+                .opacity(themeStyle.outOfMonthOpacity)
+        }
         if isNonWorking {
             return themeStyle.weekendColor
-                .opacity(day.isInDisplayedMonth ? 1 : 0.55)
         }
-        return day.isInDisplayedMonth
-            ? themeStyle.primaryText
-            : themeStyle.secondaryText.opacity(0.65)
+        return themeStyle.primaryText
     }
 
     private var accessibilityLabel: String {

@@ -1,0 +1,6 @@
+{
+  "name": "Native Toolbar",
+  "image": "quickcal-native-toolbar.png",
+  "approved": false,
+  "prompt": "QuickCal native toolbar composition: month toolbar, compact current date, left week gutter, dominant calendar grid, quiet utility rail, System Light material"
+}

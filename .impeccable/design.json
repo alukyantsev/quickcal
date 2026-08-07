@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-07T00:00:00+03:00",
+  "title": "Design System: QuickCal",
+  "extensions": {
+    "colorMeta": {
+      "system-light-today": {
+        "role": "primary",
+        "displayName": "System Blue Today",
+        "tonalRamp": ["#061225", "#0B2549", "#10376D", "#164A91", "#1B5CB6", "#247BF2", "#82B1F8", "#E9F2FE"]
+      },
+      "ledger-light-today": {
+        "role": "primary",
+        "displayName": "Ledger Deadline Blue",
+        "tonalRamp": ["#071126", "#0E234B", "#153571", "#1C4796", "#2458B3", "#6688C9", "#A8B9DE", "#EDF1F9"]
+      },
+      "signal-dark-today": {
+        "role": "primary",
+        "displayName": "Signal Lime Today",
+        "tonalRamp": ["#1E260C", "#3C4D19", "#5A7325", "#779932", "#95BF3E", "#C7FF52", "#DCFF91", "#F7FFE8"]
+      },
+      "titanium-light-today": {
+        "role": "primary",
+        "displayName": "Chrono Orange Today",
+        "tonalRamp": ["#240E09", "#481B12", "#6C291B", "#903624", "#B4442D", "#F05A3C", "#F6A18E", "#FDEEEA"]
+      }
+    },
+    "typographyMeta": {
+      "month-native": {
+        "displayName": "Native Month",
+        "purpose": "Единый заголовок месяца и года в Native Toolbar."
+      },
+      "month-ledger": {
+        "displayName": "Ledger Serif Month",
+        "purpose": "Редакционная иерархия только семейства Deadline Ledger."
+      },
+      "month-instrument": {
+        "displayName": "Instrument Month",
+        "purpose": "Системный заголовок Instrument Grid; не моноширинный."
+      },
+      "calendar-number-instrument": {
+        "displayName": "Instrument Numeric Data",
+        "purpose": "Только числа дней и номера недель Signal Grid/Titanium Chrono."
+      }
+    },
+    "shadows": [
+      {
+        "name": "popup-light",
+        "value": "0 7px 28px rgba(0, 0, 0, 0.18)",
+        "purpose": "Функционально отделяет временные Theme и Ellipsis popup panels в Light."
+      },
+      {
+        "name": "popup-dark",
+        "value": "0 7px 28px rgba(0, 0, 0, 0.42)",
+        "purpose": "Функционально отделяет временные Theme и Ellipsis popup panels в Dark."
+      }
+    ],
+    "motion": [
+      {
+        "name": "hover",
+        "value": "ease-out 120ms",
+        "purpose": "Hover-подтверждение controls и дней; 0 ms при Reduce Motion."
+      },
+      {
+        "name": "popover-width",
+        "value": "ease-in-out 160ms",
+        "purpose": "Переход между шириной с номерами недель и без них; 0 ms при Reduce Motion."
+      },
+      {
+        "name": "theme-change",
+        "value": "ease-in-out 200ms",
+        "purpose": "Смена темы; 0 ms при Reduce Motion."
+      }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Native Toolbar",
+      "kind": "nav",
+      "description": "System, Color и Prism Lens: один заголовок слева и компактные действия справа.",
+      "html": "<nav class=\"ds-native-toolbar\"><strong>July 2026</strong><span></span><button aria-label=\"Previous month\">‹</button><button>Today</button><button aria-label=\"Next month\">›</button><button class=\"ds-theme\" aria-label=\"Choose theme\">◉</button><button aria-label=\"Options\">•••</button></nav>",
+      "css": ".ds-native-toolbar { display:grid; grid-template-columns:auto 1fr repeat(5,28px); align-items:center; gap:4px; width:344px; height:32px; padding-bottom:2px; border-bottom:1px solid rgba(39,49,66,.12); color:#171A20; font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-native-toolbar strong { font-size:21px; font-weight:600; letter-spacing:-.2px; white-space:nowrap; } .ds-native-toolbar button { height:28px; padding:0; border:0; border-radius:8px; background:transparent; color:#626B78; font:600 11px -apple-system,BlinkMacSystemFont,sans-serif; transition:background 120ms ease-out; } .ds-native-toolbar button:hover { background:rgba(0,0,0,.055); } .ds-native-toolbar button:focus-visible { outline:2px solid #247BF2; outline-offset:1px; } .ds-native-toolbar button:active { background:rgba(0,0,0,.09); } .ds-native-toolbar .ds-theme { color:#247BF2; }"
+    },
+    {
+      "name": "Deadline Ledger Toolbar",
+      "kind": "nav",
+      "description": "Swiss, Deadline Ledger и Monochrome: типографический заголовок и объединённая навигация.",
+      "html": "<nav class=\"ds-ledger-toolbar\"><strong>JULY 2026</strong><span></span><div><button aria-label=\"Previous month\">‹</button><button>TODAY</button><button aria-label=\"Next month\">›</button></div><button aria-label=\"Choose theme\">◉</button><button aria-label=\"Options\">•••</button></nav>",
+      "css": ".ds-ledger-toolbar { display:grid; grid-template-columns:auto 1fr auto 28px 28px; align-items:center; gap:5px; width:344px; height:34px; color:#1D1E1B; font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-ledger-toolbar strong { font-family:ui-serif,serif; font-size:23px; font-weight:700; letter-spacing:.2px; } .ds-ledger-toolbar div { display:flex; border:1px solid rgba(111,108,96,.2); border-radius:5px; overflow:hidden; } .ds-ledger-toolbar button { height:28px; min-width:28px; padding:0 7px; border:0; background:transparent; color:#67685F; font-size:11px; font-weight:600; transition:background 120ms ease-out; } .ds-ledger-toolbar button:hover { background:rgba(29,30,27,.055); } .ds-ledger-toolbar button:focus-visible { outline:2px solid #2458B3; outline-offset:-2px; } .ds-ledger-toolbar button:active { background:rgba(29,30,27,.1); }"
+    },
+    {
+      "name": "Instrument Grid Toolbar",
+      "kind": "nav",
+      "description": "Signal Grid и Titanium Chrono: парная навигация слева, системный заголовок по центру, действия справа.",
+      "html": "<nav class=\"ds-instrument-toolbar\"><div><button aria-label=\"Previous month\">‹</button><button aria-label=\"Next month\">›</button></div><strong>JULY 2026</strong><span><button>TODAY</button><button aria-label=\"Choose theme\">◉</button><button aria-label=\"Options\">•••</button></span></nav>",
+      "css": ".ds-instrument-toolbar { display:grid; grid-template-columns:66px 1fr auto; align-items:center; gap:5px; width:344px; height:34px; padding-bottom:2px; border-bottom:1px solid rgba(57,102,87,.42); color:#F0F7F2; background:#102B24; font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-instrument-toolbar strong { justify-self:center; font-size:21px; font-weight:700; letter-spacing:.2px; } .ds-instrument-toolbar div { display:flex; border:1px solid #396657; border-radius:7px; } .ds-instrument-toolbar span { display:flex; gap:5px; } .ds-instrument-toolbar button { height:28px; min-width:28px; padding:0 7px; border:0; border-radius:7px; color:#B6CABC; background:transparent; font-size:11px; font-weight:600; transition:background 120ms ease-out; } .ds-instrument-toolbar button:hover { background:rgba(49,192,206,.11); } .ds-instrument-toolbar button:focus-visible { outline:2px solid #CEFF63; outline-offset:1px; } .ds-instrument-toolbar button:active { background:rgba(49,192,206,.18); }"
+    },
+    {
+      "name": "Theme Popup",
+      "kind": "custom",
+      "refersTo": "popup-panel",
+      "description": "Всегда доступная отдельная панель выбора System Appearance и 8 семейств × Light/Dark.",
+      "html": "<section class=\"ds-theme-popup\"><button>◉ Use System Appearance</button><hr><div><span>Signal Grid</span><button aria-label=\"Signal Grid Light\">☀</button><button class=\"ds-active\" aria-label=\"Signal Grid Dark\">☾</button></div></section>",
+      "css": ".ds-theme-popup { width:220px; padding:9px; color:#F0F7F2; background:#17382F; border:1px solid #396657; border-radius:10px; box-shadow:0 7px 28px rgba(0,0,0,.42); font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-theme-popup>button { width:100%; height:29px; text-align:left; } .ds-theme-popup div { display:grid; grid-template-columns:1fr 25px 25px; align-items:center; gap:7px; height:26px; font-size:12px; } .ds-theme-popup button { border:0; border-radius:5px; color:inherit; background:transparent; } .ds-theme-popup button:hover { background:rgba(255,255,255,.08); } .ds-theme-popup button:focus-visible { outline:2px solid #CEFF63; outline-offset:1px; } .ds-theme-popup button:active,.ds-theme-popup .ds-active { color:#102B24; background:#CEFF63; } .ds-theme-popup hr { border:0; border-top:1px solid #396657; }"
+    },
+    {
+      "name": "Options Popup",
+      "kind": "custom",
+      "refersTo": "popup-panel",
+      "description": "Ellipsis-панель только для Week Numbers, Autostart и Quit.",
+      "html": "<section class=\"ds-options-popup\"><button>☑ Week Numbers</button><button>☐ Autostart</button><hr><button>⏻ Quit QuickCal</button></section>",
+      "css": ".ds-options-popup { width:204px; padding:7px; color:#202124; background:#FFF; border:1px solid rgba(0,0,0,.12); border-radius:10px; box-shadow:0 7px 28px rgba(0,0,0,.18); font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-options-popup button { width:100%; height:29px; padding:0 7px; border:0; border-radius:6px; text-align:left; color:inherit; background:transparent; font-size:13px; } .ds-options-popup button:hover { background:rgba(0,0,0,.055); } .ds-options-popup button:focus-visible { outline:2px solid #247BF2; outline-offset:-1px; } .ds-options-popup button:active { background:rgba(0,0,0,.1); } .ds-options-popup hr { margin:2px 0; border:0; border-top:1px solid rgba(0,0,0,.12); }"
+    },
+    {
+      "name": "Calendar State Priority",
+      "kind": "custom",
+      "description": "Today, Selected, Day Off и Default демонстрируют обязательный порядок семантических состояний.",
+      "html": "<div class=\"ds-day-states\"><button class=\"ds-today ds-selected\" aria-label=\"Today, selected\">30</button><button class=\"ds-selected ds-dayoff\" aria-label=\"Selected, day off\">31</button><button class=\"ds-dayoff\" aria-label=\"Day off\">1</button><button>2</button></div>",
+      "css": ".ds-day-states { display:flex; gap:4px; align-items:center; font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-day-states button { position:relative; width:34px; height:34px; padding:0; border:0; border-radius:16px; color:#171A20; background:transparent; font-size:17px; font-variant-numeric:tabular-nums; transition:background 120ms ease-out; } .ds-day-states button:hover { background:rgba(0,0,0,.055); } .ds-day-states button:focus-visible { outline:2px solid #247BF2; outline-offset:1px; } .ds-day-states button:active { filter:brightness(.94); } .ds-day-states .ds-dayoff { color:#D84E57; font-weight:600; } .ds-day-states .ds-selected { color:#171A20; background:#DCEAFF; } .ds-day-states .ds-selected.ds-dayoff::after { content:\"\"; position:absolute; left:12px; bottom:5px; width:10px; height:2px; border-radius:1px; background:#D84E57; } .ds-day-states .ds-today { color:#FFF; background:#247BF2; } .ds-day-states .ds-today.ds-selected { box-shadow:inset 0 0 0 2px #DCEAFF; }"
+    },
+    {
+      "name": "Selected Range",
+      "kind": "custom",
+      "refersTo": "selected-system-light",
+      "description": "Связанный диапазон внутри одной недели с округлёнными внешними и прямыми внутренними краями.",
+      "html": "<div class=\"ds-range\" role=\"group\" aria-label=\"Selected dates\"><button>28</button><button>29</button><button>30</button></div>",
+      "css": ".ds-range { display:flex; gap:0; font-family:-apple-system,BlinkMacSystemFont,sans-serif; } .ds-range button { width:38px; height:31px; padding:0; border:0; border-radius:0; color:#171A20; background:#DCEAFF; font-size:17px; font-variant-numeric:tabular-nums; transition:filter 120ms ease-out; } .ds-range button:first-child { border-radius:16px 0 0 16px; } .ds-range button:last-child { border-radius:0 16px 16px 0; } .ds-range button:hover { filter:saturate(1.15); } .ds-range button:focus-visible { position:relative; z-index:1; outline:2px solid #247BF2; outline-offset:-1px; } .ds-range button:active { filter:brightness(.94); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Календарь на расстоянии одного жеста",
+    "overview": "QuickCal — компактный нативный инструмент macOS для чтения месяца, рабочих дней и сроков поверх текущего приложения. Визуальная выразительность подчинена скорости: пользователь видит один заголовок «месяц + год», доминирующую сетку и только необходимые действия.\n\nСистема включает восемь семейств, каждое в Light и Dark, — всего 16 тем. Native-семейства специально разнесены по материалу: System — neutral graphite/slate, Color — magenta-violet, Prism Lens — cyan/marine. Остальные семейства сохраняют собственные материалы и общую семантику состояний.",
+    "keyCharacteristics": [
+      "8 семейств × Light/Dark = 16 согласованных тем.",
+      "Один заголовок месяца и года без логотипа и дублирующей полной даты.",
+      "Номера недель находятся справа от семидневной сетки.",
+      "Компактный переключатель темы всегда видим; редкие настройки вынесены в ellipsis-меню.",
+      "Соседние даты и номера недель заметно тише основного месяца."
+    ],
+    "rules": [
+      {
+        "name": "The State Before Theme Rule",
+        "body": "Визуальный приоритет всегда Today → Selected → Day Off → Default. Выбранный Day Off сохраняет коралловый маркер под числом.",
+        "section": "colors"
+      },
+      {
+        "name": "The Instrument Mono Boundary Rule",
+        "body": "В Instrument Grid mono применяется только к числам дней и номерам недель; заголовок месяца, дни недели и controls остаются системными.",
+        "section": "typography"
+      },
+      {
+        "name": "The Functional Elevation Rule",
+        "body": "Тень допустима только у перекрывающей popup-панели; основные shell, toolbar, calendar panel и выбранный диапазон остаются без drop-shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Dark Material Diversity Rule",
+        "body": "Dark означает низкую светлоту, а не чёрный фон. Каждое семейство сохраняет собственный цветовой материал.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do сохранять 8 семейств × Light/Dark и точное распределение по трём layout grammar.",
+      "Do использовать один заголовок «месяц + год» и держать номера недель справа.",
+      "Do оставлять Theme всегда видимым, а Week Numbers, Autostart и Quit — внутри ellipsis.",
+      "Do соблюдать приоритет Today → Selected → Day Off → Default и приглушать соседние даты и номера недель.",
+      "Do сохранять различимые цветовые материалы всех восьми Dark-вариантов.",
+      "Do обнулять длительность motion при Reduce Motion.",
+      "Do использовать функциональную тень только у временных popup panels."
+    ],
+    "donts": [
+      "Don't добавлять логотип, отдельную полную дату или второй заголовок месяца.",
+      "Don't прятать Theme в ellipsis или возвращать постоянный settings footer.",
+      "Don't размещать номера недель слева.",
+      "Don't применять mono ко всему Instrument Grid или serif ко всем Deadline Ledger-семействам.",
+      "Don't добавлять декоративный drop-shadow к shell, toolbar, calendar panel или выбранному диапазону.",
+      "Don't передавать Today, Selected и Day Off только цветом.",
+      "Don't сводить Dark-варианты к набору почти чёрных фонов с разными акцентами."
+    ]
+  }
+}

@@ -6,7 +6,7 @@ import QuickCalKit
 @MainActor
 struct QuickCalThemeTests {
     @Test
-    func themesCycleThroughAllSixOptionsInApprovedOrder() {
+    func themesCycleThroughAllSixteenOptionsInFamilyPairs() {
         #expect(QuickCalTheme.allCases == [
             .systemLight,
             .systemDark,
@@ -14,23 +14,40 @@ struct QuickCalThemeTests {
             .swissDark,
             .colorLight,
             .colorDark,
+            .ledgerLight,
+            .ledgerDark,
+            .prismLight,
+            .prismDark,
+            .signalGridLight,
+            .signalGridDark,
+            .titaniumChronoLight,
+            .titaniumChronoDark,
+            .monochromeLight,
+            .monochromeDark,
         ])
         #expect(QuickCalTheme.systemLight.next == .systemDark)
-        #expect(QuickCalTheme.systemDark.next == .swissLight)
-        #expect(QuickCalTheme.swissLight.next == .swissDark)
-        #expect(QuickCalTheme.swissDark.next == .colorLight)
-        #expect(QuickCalTheme.colorLight.next == .colorDark)
-        #expect(QuickCalTheme.colorDark.next == .systemLight)
+        #expect(QuickCalTheme.colorDark.next == .ledgerLight)
+        #expect(QuickCalTheme.monochromeDark.next == .systemLight)
+        #expect(QuickCalTheme.systemLight.previous == .monochromeDark)
     }
 
     @Test
     func lightAndDarkSemanticsMatchEveryThemePair() {
-        #expect(!QuickCalTheme.systemLight.isDark)
-        #expect(QuickCalTheme.systemDark.isDark)
-        #expect(!QuickCalTheme.swissLight.isDark)
-        #expect(QuickCalTheme.swissDark.isDark)
-        #expect(!QuickCalTheme.colorLight.isDark)
-        #expect(QuickCalTheme.colorDark.isDark)
+        for family in QuickCalThemeFamily.allCases {
+            let light = QuickCalTheme.theme(
+                family: family,
+                appearance: .light
+            )
+            let dark = QuickCalTheme.theme(
+                family: family,
+                appearance: .dark
+            )
+
+            #expect(light.family == family)
+            #expect(dark.family == family)
+            #expect(!light.isDark)
+            #expect(dark.isDark)
+        }
     }
 
     @Test
@@ -84,6 +101,30 @@ struct QuickCalThemeTests {
         #expect(restored.manualTheme == .systemDark)
         #expect(restored.resolvedTheme(systemIsDark: false) == .systemDark)
         #expect(restored.resolvedTheme(systemIsDark: true) == .systemDark)
+    }
+
+    @Test
+    func explicitSelectionAndSystemAppearanceUpdatePersistence() {
+        let fixture = defaultsFixture()
+        defer {
+            fixture.defaults.removePersistentDomain(
+                forName: fixture.suiteName
+            )
+        }
+        let key = "theme.test"
+        let store = QuickCalThemeStore(
+            userDefaults: fixture.defaults,
+            key: key
+        )
+
+        #expect(store.select(.signalGridDark) == .signalGridDark)
+        #expect(fixture.defaults.string(forKey: key) == "signalGridDark")
+
+        store.useSystemAppearance()
+
+        #expect(store.manualTheme == nil)
+        #expect(fixture.defaults.object(forKey: key) == nil)
+        #expect(store.resolvedTheme(systemIsDark: false) == .systemLight)
     }
 
     @Test

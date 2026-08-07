@@ -1,0 +1,6 @@
+{
+  "name": "Instrument Grid v2",
+  "image": "quickcal-instrument-grid-v2.png",
+  "approved": false,
+  "prompt": "Revised QuickCal instrument grid: no branding, single month title, week numbers right, optional ellipsis, theme and quit always visible"
+}

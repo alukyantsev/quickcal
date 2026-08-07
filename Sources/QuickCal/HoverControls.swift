@@ -41,7 +41,6 @@ struct HoverIconButton: View {
             )
             .fill(isHovered ? themeStyle.hoverColor : .clear)
         }
-        .scaleEffect(isHovered && !reduceMotion ? 1.05 : 1)
         .onHover { isHovered = $0 }
         .animation(
             .easeOut(duration: reduceMotion ? 0 : 0.12),
@@ -117,7 +116,6 @@ struct HoverActionButton: View {
             )
             .fill(isHovered ? themeStyle.hoverColor : .clear)
         }
-        .scaleEffect(isHovered && !reduceMotion ? 1.01 : 1)
         .onHover { isHovered = $0 }
         .animation(
             .easeOut(duration: reduceMotion ? 0 : 0.12),
@@ -129,6 +127,8 @@ struct HoverActionButton: View {
 struct HoverTextButton: View {
     let title: String
     let help: String
+    let height: CGFloat
+    let horizontalPadding: CGFloat
     let action: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -140,8 +140,8 @@ struct HoverTextButton: View {
             Text(verbatim: title)
                 .font(.system(size: 11, weight: .semibold))
                 .lineLimit(1)
-                .padding(.horizontal, 8)
-                .frame(height: 28)
+                .padding(.horizontal, horizontalPadding)
+                .frame(height: height)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -153,7 +153,6 @@ struct HoverTextButton: View {
             )
             .fill(isHovered ? themeStyle.hoverColor : .clear)
         }
-        .scaleEffect(isHovered && !reduceMotion ? 1.03 : 1)
         .onHover { isHovered = $0 }
         .animation(
             .easeOut(duration: reduceMotion ? 0 : 0.12),

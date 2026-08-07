@@ -1,0 +1,6 @@
+{
+  "name": "Deadline Ledger",
+  "image": "quickcal-deadline-ledger.png",
+  "approved": false,
+  "prompt": "QuickCal editorial deadline ledger composition: asymmetric month and year, grouped navigation, left week index, ruled calendar rows, ledger footer"
+}

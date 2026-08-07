@@ -1,0 +1,6 @@
+{
+  "name": "Deadline Ledger v3",
+  "image": "quickcal-deadline-ledger-v3.png",
+  "approved": true,
+  "prompt": "QuickCal Deadline Ledger v3: single month header, centered weekday columns, tabular dates, week numbers right, complete footer"
+}

@@ -1,6 +1,26 @@
+/*
+ THESIS: QuickCal shows the structure of a month in one gesture and refuses
+ duplicated date headers or a permanent settings footer.
+ OWN-WORLD: Eight paired theme families share three grammars: native toolbar,
+ deadline ledger, and instrument grid. State color, geometry, and typography
+ change by family while calendar behavior stays identical.
+ STORY: Open, read the month, mark dates, adjust rare settings, return to work.
+ FIRST VIEWPORT: One compact month header, dominant seven-column grid, optional
+ week numbers on the right, visible theme control, and an ellipsis settings menu.
+ FORM: Operate mode; user-approved Native Toolbar v3, Deadline Ledger v3, and
+ Instrument Grid v3 compositions.
+ FINISH: unreviewed and undocumented is unfinished; this build ends with the
+ finish review, the verdict, and DESIGN.md
+*/
+
 import AppKit
 import SwiftUI
 import QuickCalKit
+
+private enum QuickCalHeaderPanel {
+    case themes
+    case options
+}
 
 @MainActor
 struct CalendarPopoverView: View {
@@ -10,6 +30,7 @@ struct CalendarPopoverView: View {
     @StateObject private var launchAtLogin = LaunchAtLoginController()
     @StateObject private var selectedDates = SelectedDatesStore()
     @StateObject private var workCalendar = WorkCalendarController()
+    @State private var activePanel: QuickCalHeaderPanel?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var systemColorScheme
@@ -41,25 +62,13 @@ struct CalendarPopoverView: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
-            ZStack(alignment: .top) {
+            ZStack {
                 QuickCalThemeBackground(theme: theme)
 
-                VStack(alignment: .leading, spacing: 0) {
-                    dateHeader(for: context.date)
-
-                    calendarSurface(today: context.date)
-
-                    utilityFooter
-                }
-                .padding(themeStyle.shellPadding)
-
-                if themeStyle.showsSwissStripe {
-                    Rectangle()
-                        .fill(Color(red: 0.875, green: 0.4, blue: 0.376))
-                        .frame(height: 4)
-                }
+                calendarSurface(today: context.date)
+                    .padding(themeStyle.shellPadding)
             }
-            .frame(width: showWeekNumbers ? 360 : 328)
+            .frame(width: showWeekNumbers ? 376 : 344)
             .clipShape(
                 RoundedRectangle(
                     cornerRadius: themeStyle.outerCornerRadius,
@@ -83,63 +92,8 @@ struct CalendarPopoverView: View {
         }
     }
 
-    private func dateHeader(for date: Date) -> some View {
-        let text = DatePresentation.fullDate(
-            date,
-            calendar: calendar,
-            localization: localization
-        )
-        let displayedText = themeStyle.usesUppercaseHeaders
-            ? text.uppercased(with: localization.locale)
-            : text
-
-        return Text(verbatim: displayedText)
-            .font(.system(
-                size: themeStyle.usesHeaderPill ? 16 : 15,
-                weight: themeStyle.usesUppercaseHeaders
-                    ? .bold
-                    : .semibold
-            ))
-            .tracking(themeStyle.usesUppercaseHeaders ? 0.35 : 0)
-            .foregroundStyle(
-                themeStyle.usesHeaderPill
-                    ? themeStyle.primaryText.opacity(0.92)
-                    : themeStyle.secondaryText
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, themeStyle.usesHeaderPill ? 15 : 3)
-            .padding(.vertical, themeStyle.usesHeaderPill ? 13 : 0)
-            .padding(.bottom, themeStyle.usesHeaderPill ? 0 : 12)
-            .background {
-                if themeStyle.usesHeaderPill {
-                    RoundedRectangle(
-                        cornerRadius: 19,
-                        style: .continuous
-                    )
-                    .fill(themeStyle.headerBackground)
-                    .overlay {
-                        RoundedRectangle(
-                            cornerRadius: 19,
-                            style: .continuous
-                        )
-                        .strokeBorder(
-                            themeStyle.headerBorderColor,
-                            lineWidth: 1
-                        )
-                    }
-                }
-            }
-            .overlay(alignment: .bottom) {
-                if !themeStyle.usesHeaderPill {
-                    Rectangle()
-                        .fill(themeStyle.dividerColor)
-                        .frame(height: 1)
-                }
-            }
-    }
-
     private func calendarSurface(today: Date) -> some View {
-        VStack(spacing: 9) {
+        VStack(spacing: themeStyle.usesWeekRules ? 7 : 9) {
             monthNavigation
 
             if let month = CalendarMonth(
@@ -164,8 +118,17 @@ struct CalendarPopoverView: View {
                     action: showToday
                 )
             }
+
+            if let message = launchAtLogin.message {
+                Text(verbatim: message)
+                    .font(.caption2)
+                    .foregroundStyle(themeStyle.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 5)
+            }
         }
         .padding(themeStyle.calendarPadding)
+        .padding(.bottom, activePanel == .themes ? 42 : 0)
         .frame(maxWidth: .infinity)
         .background {
             RoundedRectangle(
@@ -184,49 +147,404 @@ struct CalendarPopoverView: View {
                 )
             }
         }
-        .padding(.top, themeStyle.usesHeaderPill ? 9 : 12)
-        .padding(.bottom, 8)
+        .overlay(alignment: .topTrailing) {
+            popupPanel
+                .padding(.top, 36)
+                .zIndex(10)
+        }
     }
 
+    @ViewBuilder
     private var monthNavigation: some View {
-        HStack(spacing: 5) {
-            HoverIconButton(
-                title: localization.string(.previousMonth),
-                systemImage: "chevron.left",
-                controlSize: 32
-            ) {
-                moveMonth(by: -1)
-            }
+        switch themeStyle.layout {
+        case .nativeToolbar:
+            nativeToolbar
+        case .deadlineLedger:
+            deadlineLedgerToolbar
+        case .instrumentGrid:
+            instrumentGridToolbar
+        }
+    }
 
-            Text(verbatim: monthTitle)
-                .font(.system(
-                    size: themeStyle.usesUppercaseHeaders ? 21 : 22,
-                    weight: themeStyle.usesUppercaseHeaders
-                        ? .bold
-                        : .semibold
-                ))
-                .tracking(themeStyle.usesUppercaseHeaders ? -0.35 : -0.25)
-                .foregroundStyle(themeStyle.primaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.80)
-                .allowsTightening(true)
-                .frame(maxWidth: .infinity)
+    private var nativeToolbar: some View {
+        HStack(spacing: 4) {
+            monthTitleView
 
-            HoverTextButton(
-                title: localization.string(.today),
-                help: localization.string(.returnToToday),
-                action: showToday
-            )
+            Spacer(minLength: 4)
 
-            HoverIconButton(
-                title: localization.string(.nextMonth),
-                systemImage: "chevron.right",
-                controlSize: 32
-            ) {
-                moveMonth(by: 1)
-            }
+            previousMonthButton
+            todayButton
+            nextMonthButton
+            themeMenu
+            optionsMenu
         }
         .frame(height: 32)
+        .padding(.bottom, 2)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(themeStyle.dividerColor)
+                .frame(height: 1)
+                .offset(y: 5)
+        }
+    }
+
+    private var deadlineLedgerToolbar: some View {
+        HStack(spacing: 5) {
+            monthTitleView
+
+            Spacer(minLength: 5)
+
+            HStack(spacing: 0) {
+                previousMonthButton
+                todayButton
+                nextMonthButton
+            }
+            .background {
+                RoundedRectangle(
+                    cornerRadius: themeStyle.controlCornerRadius,
+                    style: .continuous
+                )
+                .strokeBorder(themeStyle.dividerColor, lineWidth: 1)
+            }
+
+            themeMenu
+            optionsMenu
+        }
+        .frame(height: 34)
+        .padding(.bottom, 2)
+    }
+
+    private var instrumentGridToolbar: some View {
+        HStack(spacing: 5) {
+            HStack(spacing: 0) {
+                previousMonthButton
+                nextMonthButton
+            }
+            .background {
+                RoundedRectangle(
+                    cornerRadius: themeStyle.controlCornerRadius,
+                    style: .continuous
+                )
+                .strokeBorder(themeStyle.dividerColor, lineWidth: 1)
+            }
+
+            Spacer(minLength: 5)
+
+            monthTitleView
+
+            Spacer(minLength: 5)
+
+            todayButton
+            themeMenu
+            optionsMenu
+        }
+        .frame(height: 34)
+        .padding(.bottom, 2)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(themeStyle.dividerColor)
+                .frame(height: 1)
+                .offset(y: 5)
+        }
+    }
+
+    private var monthTitleView: some View {
+        Text(verbatim: monthTitle)
+            .font(.system(
+                size: themeStyle.monthFontSize,
+                weight: themeStyle.monthFontWeight,
+                design: themeStyle.monthFontDesign
+            ))
+            .monospacedDigit()
+            .tracking(themeStyle.uppercaseMonth ? 0.2 : -0.2)
+            .foregroundStyle(themeStyle.primaryText)
+            .lineLimit(1)
+            .minimumScaleFactor(0.74)
+            .allowsTightening(true)
+    }
+
+    private var previousMonthButton: some View {
+        HoverIconButton(
+            title: localization.string(.previousMonth),
+            systemImage: "chevron.left",
+            symbolSize: 14,
+            controlSize: 28
+        ) {
+            moveMonth(by: -1)
+        }
+    }
+
+    private var nextMonthButton: some View {
+        HoverIconButton(
+            title: localization.string(.nextMonth),
+            systemImage: "chevron.right",
+            symbolSize: 14,
+            controlSize: 28
+        ) {
+            moveMonth(by: 1)
+        }
+    }
+
+    private var todayButton: some View {
+        HoverTextButton(
+            title: localization.string(.today),
+            help: localization.string(.returnToToday),
+            height: 28,
+            horizontalPadding: 7,
+            action: showToday
+        )
+    }
+
+    private var themeMenu: some View {
+        headerPanelButton(
+            title: localization.string(.chooseTheme),
+            systemImage: "paintpalette",
+            panel: .themes
+        )
+    }
+
+    private var optionsMenu: some View {
+        headerPanelButton(
+            title: localization.string(.optionsMenu),
+            systemImage: "ellipsis",
+            panel: .options
+        )
+    }
+
+    private func headerPanelButton(
+        title: String,
+        systemImage: String,
+        panel: QuickCalHeaderPanel
+    ) -> some View {
+        Button {
+            activePanel = activePanel == panel ? nil : panel
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 14, weight: .semibold))
+
+                if panel == .themes {
+                    Circle()
+                        .fill(themeStyle.todayColor)
+                        .frame(width: 7, height: 7)
+                        .overlay {
+                            Circle().strokeBorder(
+                                themeStyle.primaryText,
+                                lineWidth: 1
+                            )
+                        }
+                        .offset(x: 2, y: -2)
+                }
+            }
+            .frame(width: 28, height: 28)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(themeStyle.secondaryText)
+        .background {
+            RoundedRectangle(
+                cornerRadius: themeStyle.controlCornerRadius,
+                style: .continuous
+            )
+            .fill(activePanel == panel ? themeStyle.hoverColor : .clear)
+        }
+        .help(Text(verbatim: title))
+        .accessibilityLabel(Text(verbatim: title))
+    }
+
+    @ViewBuilder
+    private var popupPanel: some View {
+        switch activePanel {
+        case .themes:
+            themePanel
+        case .options:
+            optionsPanel
+        case nil:
+            EmptyView()
+        }
+    }
+
+    private var themePanel: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            popupRow(
+                title: localization.string(.useSystemAppearance),
+                systemImage: themeStore.manualTheme == nil
+                    ? "checkmark.circle.fill"
+                    : "circle.lefthalf.filled"
+            ) {
+                themeStore.useSystemAppearance()
+                activePanel = nil
+                onThemeChanged(themeStore.resolvedTheme(
+                    systemIsDark: systemColorScheme == .dark
+                ))
+            }
+
+            Rectangle()
+                .fill(popupDividerColor)
+                .frame(height: 1)
+
+            ForEach(QuickCalThemeFamily.allCases) { family in
+                HStack(spacing: 7) {
+                    Text(verbatim: localization.string(family.localizationKey))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(popupTextColor)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    themeChoiceButton(family: family, appearance: .light)
+                    themeChoiceButton(family: family, appearance: .dark)
+                }
+                .frame(height: 26)
+            }
+        }
+        .padding(9)
+        .frame(width: 238)
+        .background {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(popupBackgroundColor)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(popupDividerColor, lineWidth: 1)
+                }
+                .shadow(
+                    color: .black.opacity(theme.isDark ? 0.42 : 0.18),
+                    radius: 14,
+                    x: 0,
+                    y: 7
+                )
+        }
+    }
+
+    private var optionsPanel: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            popupRow(
+                title: localization.string(.showWeekNumbers),
+                systemImage: showWeekNumbers
+                    ? "checkmark.square.fill"
+                    : "square"
+            ) {
+                showWeekNumbers.toggle()
+                activePanel = nil
+            }
+
+            popupRow(
+                title: localization.string(.launchAtLogin),
+                systemImage: launchAtLogin.isEnabled
+                    ? "checkmark.square.fill"
+                    : "square"
+            ) {
+                launchAtLogin.setEnabled(!launchAtLogin.isEnabled)
+                activePanel = nil
+            }
+
+            Rectangle()
+                .fill(popupDividerColor)
+                .frame(height: 1)
+                .padding(.vertical, 2)
+
+            popupRow(
+                title: localization.string(.quitQuickCal),
+                systemImage: "power"
+            ) {
+                NSApplication.shared.terminate(nil)
+            }
+        }
+        .padding(7)
+        .frame(width: 218)
+        .background {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(popupBackgroundColor)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(popupDividerColor, lineWidth: 1)
+                }
+                .shadow(
+                    color: .black.opacity(theme.isDark ? 0.42 : 0.18),
+                    radius: 14,
+                    x: 0,
+                    y: 7
+                )
+        }
+    }
+
+    private func popupRow(
+        title: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(width: 17)
+
+                Text(verbatim: title)
+                    .font(.system(size: 13))
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(popupTextColor)
+            .padding(.horizontal, 7)
+            .frame(height: 29)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func themeChoiceButton(
+        family: QuickCalThemeFamily,
+        appearance: QuickCalThemeAppearance
+    ) -> some View {
+        let candidate = QuickCalTheme.theme(
+            family: family,
+            appearance: appearance
+        )
+        let isSelected = candidate == theme
+        let appearanceName = localization.string(
+            appearance == .light ? .appearanceLight : .appearanceDark
+        )
+        let accessibleName = "\(localization.string(family.localizationKey)), \(appearanceName)"
+
+        return Button {
+            activePanel = nil
+            selectTheme(candidate)
+        } label: {
+            Image(systemName: appearance == .light ? "sun.max" : "moon")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(
+                    isSelected ? themeStyle.todayText : popupTextColor
+                )
+                .frame(width: 25, height: 22)
+                .background {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(isSelected ? themeStyle.todayColor : .clear)
+                        .overlay {
+                            RoundedRectangle(
+                                cornerRadius: 5,
+                                style: .continuous
+                            )
+                            .strokeBorder(popupDividerColor, lineWidth: 1)
+                        }
+                }
+        }
+        .buttonStyle(.plain)
+        .help(Text(verbatim: accessibleName))
+        .accessibilityLabel(Text(verbatim: accessibleName))
+    }
+
+    private var popupBackgroundColor: Color {
+        theme.isDark ? Color(rgb: 0x24282D) : Color(rgb: 0xFFFFFF)
+    }
+
+    private var popupTextColor: Color {
+        theme.isDark ? Color(rgb: 0xF5F6F7) : Color(rgb: 0x202124)
+    }
+
+    private var popupDividerColor: Color {
+        theme.isDark
+            ? Color.white.opacity(0.14)
+            : Color.black.opacity(0.12)
     }
 
     private var monthTitle: String {
@@ -235,89 +553,13 @@ struct CalendarPopoverView: View {
             calendar: calendar,
             localization: localization
         )
-        return themeStyle.usesUppercaseHeaders
+        return themeStyle.uppercaseMonth
             ? title.uppercased(with: localization.locale)
             : title
     }
 
-    private var utilityFooter: some View {
-        VStack(spacing: 4) {
-            Rectangle()
-                .fill(themeStyle.dividerColor)
-                .frame(height: 1)
-
-            HStack(spacing: 4) {
-                compactToggle(
-                    title: localization.string(.weekNumbersShort),
-                    help: localization.string(.showWeekNumbers),
-                    isOn: $showWeekNumbers
-                )
-
-                compactToggle(
-                    title: localization.string(.launchAtLoginShort),
-                    help: localization.string(.launchAtLogin),
-                    isOn: Binding(
-                        get: { launchAtLogin.isEnabled },
-                        set: { launchAtLogin.setEnabled($0) }
-                    )
-                )
-
-                HoverIconButton(
-                    title: localization.string(.nextTheme),
-                    systemImage: "paintpalette",
-                    symbolSize: 15,
-                    controlSize: 30,
-                    action: selectNextTheme
-                )
-
-                HoverIconButton(
-                    title: localization.string(.quitQuickCal),
-                    systemImage: "power",
-                    symbolSize: 14,
-                    controlSize: 30
-                ) {
-                    NSApplication.shared.terminate(nil)
-                }
-            }
-
-            if let message = launchAtLogin.message {
-                Text(verbatim: message)
-                    .font(.caption2)
-                    .foregroundStyle(themeStyle.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 5)
-            }
-        }
-        .padding(.top, 6)
-    }
-
-    private func compactToggle(
-        title: String,
-        help: String,
-        isOn: Binding<Bool>
-    ) -> some View {
-        HoverSurface(
-            horizontalPadding: 4,
-            verticalPadding: 4
-        ) {
-            Toggle(isOn: isOn) {
-                Text(verbatim: title)
-                    .font(.system(size: 10, weight: .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-            .toggleStyle(CompactCheckboxToggleStyle())
-            .foregroundStyle(themeStyle.secondaryText)
-        }
-        .help(Text(verbatim: help))
-        .accessibilityLabel(Text(verbatim: help))
-    }
-
-    private func selectNextTheme() {
-        let nextTheme = themeStore.selectNext(
-            systemIsDark: systemColorScheme == .dark
-        )
-        onThemeChanged(nextTheme)
+    private func selectTheme(_ selectedTheme: QuickCalTheme) {
+        onThemeChanged(themeStore.select(selectedTheme))
     }
 
     private func showToday() {

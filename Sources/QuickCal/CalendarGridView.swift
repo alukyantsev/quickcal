@@ -20,12 +20,39 @@ struct CalendarGridView: View {
             HStack(spacing: 4) {
                 ForEach(Array(month.weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol)
-                        .font(.callout.weight(.semibold))
+                        .font(.system(
+                            size: 12,
+                            weight: .semibold,
+                            design: themeStyle.calendarLabelFontDesign
+                        ))
                         .foregroundStyle(themeStyle.secondaryText)
                         .frame(width: cellWidth)
                 }
                 if showWeekNumbers {
-                    Color.clear.frame(width: 28, height: 1)
+                    Text(verbatim: localization.string(.weekNumberShort))
+                        .font(.system(
+                            size: 11,
+                            weight: .semibold,
+                            design: themeStyle.calendarLabelFontDesign
+                        ))
+                        .foregroundStyle(
+                            themeStyle.secondaryText.opacity(
+                                themeStyle.weekNumberOpacity
+                            )
+                        )
+                        .frame(width: 28)
+                }
+            }
+            .padding(.bottom, themeStyle.usesWeekRules ? 3 : 0)
+            .overlay(alignment: .bottom) {
+                if themeStyle.usesWeekRules {
+                    Rectangle()
+                        .fill(
+                            themeStyle.dividerColor.opacity(
+                                themeStyle.headerRuleOpacity
+                            )
+                        )
+                        .frame(height: 1)
                 }
             }
 
@@ -70,9 +97,16 @@ struct CalendarGridView: View {
                     }
                     if showWeekNumbers {
                         Text(week.weekOfYear, format: .number)
-                            .font(.callout.weight(.semibold))
+                            .font(.system(
+                                size: 11,
+                                weight: .medium,
+                                design: themeStyle.dayFontDesign
+                            ))
+                            .monospacedDigit()
                             .foregroundStyle(
-                                themeStyle.secondaryText.opacity(0.62)
+                                themeStyle.secondaryText.opacity(
+                                    themeStyle.weekNumberOpacity
+                                )
                             )
                             .frame(width: 28)
                             .accessibilityLabel(
@@ -81,6 +115,18 @@ struct CalendarGridView: View {
                                     week.weekOfYear
                                 ))
                             )
+                    }
+                }
+                .overlay(alignment: .bottom) {
+                    if themeStyle.usesWeekRules {
+                        Rectangle()
+                            .fill(
+                                themeStyle.dividerColor.opacity(
+                                    themeStyle.rowRuleOpacity
+                                )
+                            )
+                            .frame(height: 1)
+                            .offset(y: 2)
                     }
                 }
             }
