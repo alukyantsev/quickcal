@@ -3,6 +3,12 @@ import QuickCalKit
 
 @MainActor
 struct QuoteRailView: View {
+    private enum Column {
+        static let price: CGFloat = 66
+        static let absoluteChange: CGFloat = 70
+        static let percentageChange: CGFloat = 60
+    }
+
     @ObservedObject var controller: QuoteController
     var onRefresh: (() -> Void)?
 
@@ -86,16 +92,21 @@ struct QuoteRailView: View {
             maximumFractionDigits: quote.price < 10 ? 4 : 2,
             locale: localization.locale
         )
-        return HStack(spacing: 6) {
+        return HStack(spacing: 0) {
             Text(verbatim: quote.displayName)
                 .lineLimit(1)
-            Spacer(minLength: 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Text(verbatim: Self.priceString(quote.price))
                 .monospacedDigit()
-            Text(verbatim: "\(direction) \(absoluteChange) · \(change)")
+                .frame(width: Column.price, alignment: .trailing)
+            Text(verbatim: "\(direction) \(absoluteChange)")
                 .monospacedDigit()
                 .foregroundStyle(changeColor(for: quote.change))
-                .frame(minWidth: 116, alignment: .trailing)
+                .frame(width: Column.absoluteChange, alignment: .trailing)
+            Text(verbatim: change)
+                .monospacedDigit()
+                .foregroundStyle(changeColor(for: quote.change))
+                .frame(width: Column.percentageChange, alignment: .trailing)
         }
         .font(.system(size: 11, weight: .medium, design: themeStyle.layout == .instrumentGrid ? .monospaced : .default))
         .foregroundStyle(themeStyle.primaryText)
