@@ -1067,9 +1067,10 @@ private struct WeatherHeaderContextView<Controls: View>: View {
     }
 
     private static func updatedString(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("dMMMHHmm")
-        return formatter.string(from: date)
+        let time = DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short)
+        let dateFormatter = DateFormatter()
+        dateFormatter.setLocalizedDateFormatFromTemplate("dMMM")
+        return "\(time) · \(dateFormatter.string(from: date))"
     }
 }
 
@@ -1149,9 +1150,10 @@ private struct NetworkHeaderContextView<Controls: View>: View {
     }
 
     private static func updatedString(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("dMMMHHmm")
-        return formatter.string(from: date)
+        let time = DateFormatter.localizedString(from: date, dateStyle: .none, timeStyle: .short)
+        let dateFormatter = DateFormatter()
+        dateFormatter.setLocalizedDateFormatFromTemplate("dMMM")
+        return "\(time) · \(dateFormatter.string(from: date))"
     }
 }
 

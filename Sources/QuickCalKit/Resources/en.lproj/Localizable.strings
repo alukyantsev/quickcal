@@ -49,7 +49,7 @@
 "weather.refresh" = "Refresh forecast";
 "weather.refreshing" = "Refreshing forecast";
 "weather.unavailable" = "Forecast is temporarily unavailable";
-"weather.updated_format" = "Updated %@";
+"weather.updated_format" = "Upd %@";
 "weather.temperature_format" = "%.0f°";
 "weather.humidity_format" = "Humidity %d%%";
 "weather.precipitation_format" = "Precipitation %d%%";

@@ -49,7 +49,7 @@
 "weather.refresh" = "Обновить прогноз";
 "weather.refreshing" = "Обновляем прогноз";
 "weather.unavailable" = "Прогноз временно недоступен";
-"weather.updated_format" = "Обновлено %@";
+"weather.updated_format" = "Upd %@";
 "weather.temperature_format" = "%.0f°";
 "weather.humidity_format" = "Влажность %d%%";
 "weather.precipitation_format" = "Осадки %d%%";
