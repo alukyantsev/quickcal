@@ -35,5 +35,7 @@
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>QuickCal uses your location only after you enable automatic weather location.</string>
 </dict>
 </plist>

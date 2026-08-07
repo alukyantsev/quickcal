@@ -467,7 +467,7 @@ struct WeatherRailPresentationTests {
         let location = WeatherLocation(displayName: "Moscow", latitude: 55.75, longitude: 37.62)
         let forecast = WeatherForecast(
             location: location,
-            hourly: (0..<25).map { hour in
+            hourly: (0..<49).map { hour in
                 WeatherForecastPoint(
                     timestamp: start.addingTimeInterval(Double(hour) * 3_600),
                     temperatureCelsius: Double(hour),

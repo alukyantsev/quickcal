@@ -143,6 +143,15 @@ if [[ "${FIRST_LOCALIZATION}" != "en" || "${SECOND_LOCALIZATION}" != "ru" ]]; th
     exit 1
 fi
 
+LOCATION_USAGE_DESCRIPTION="$(
+    /usr/bin/plutil -extract NSLocationWhenInUseUsageDescription raw \
+        "${PROJECT_DIR}/dist/QuickCal.app/Contents/Info.plist"
+)"
+if [[ "${LOCATION_USAGE_DESCRIPTION}" != *"automatic weather location"* ]]; then
+    echo "not ok - automatic weather location must have a clear macOS usage description" >&2
+    exit 1
+fi
+
 INSTALLED_ICON="${PROJECT_DIR}/dist/QuickCal.app/Contents/Resources/QuickCal.icns"
 cmp "${PROJECT_DIR}/Support/QuickCal.icns" "${INSTALLED_ICON}" >/dev/null || {
     echo "not ok - QuickCal.icns must be copied into the app bundle" >&2
@@ -245,5 +254,6 @@ if [[ "$(<"${MISSING_RESOURCE_ERROR}")" != *"missing localization bundle"* ]]; t
 fi
 
 echo "ok - localization resources are packaged with fail-fast validation"
+echo "ok - automatic weather location usage description is packaged"
 echo "ok - QuickCal.icns is packaged with fail-fast validation"
 echo "ok - Assets.car is packaged without copying the raw Icon Composer source"
