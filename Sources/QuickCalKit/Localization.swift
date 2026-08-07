@@ -42,6 +42,19 @@ public struct QuickCalLocalization: Sendable {
         case vacationRemainingMany = "vacation.remaining.many"
         case vacationFinalDay = "vacation.final_day"
         case vacationToday = "vacation.today"
+        case weatherVisibility = "weather.visibility"
+        case weatherLocation = "weather.location"
+        case weatherSearchLocation = "weather.search_location"
+        case weatherAutomaticLocation = "weather.automatic_location"
+        case weatherInterval = "weather.interval"
+        case weatherRefresh = "weather.refresh"
+        case weatherRefreshing = "weather.refreshing"
+        case weatherUnavailable = "weather.unavailable"
+        case weatherUpdatedFormat = "weather.updated_format"
+        case weatherTemperatureFormat = "weather.temperature_format"
+        case weatherHumidityFormat = "weather.humidity_format"
+        case weatherPrecipitationFormat = "weather.precipitation_format"
+        case weatherPeriodAccessibilityFormat = "weather.period_accessibility_format"
     }
 
     public static var current: QuickCalLocalization {

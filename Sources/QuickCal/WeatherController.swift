@@ -115,6 +115,25 @@ final class WeatherController: ObservableObject {
         requestAutomaticLocationIfAuthorized()
     }
 
+    func setVisibility(_ isVisible: Bool) {
+        var updated = settings
+        updated.isVisible = isVisible
+        persist(updated)
+    }
+
+    func setInterval(_ interval: WeatherInterval) {
+        guard settings.interval != interval else { return }
+        var updated = settings
+        updated.interval = interval
+        persist(updated)
+    }
+
+    func searchLocations(query: String) async -> [WeatherLocation] {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedQuery.isEmpty else { return [] }
+        return (try? await provider.searchLocations(query: normalizedQuery)) ?? []
+    }
+
     func refresh() {
         guard refreshTask == nil else { return }
         refreshTask = Task { [weak self] in

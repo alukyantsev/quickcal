@@ -458,3 +458,64 @@ struct WeatherControllerTests {
         return (defaults, suiteName)
     }
 }
+
+@Suite
+struct WeatherRailPresentationTests {
+    @Test(arguments: WeatherInterval.allCases)
+    func intervalSelectsActualForecastPoints(interval: WeatherInterval) throws {
+        let start = Date(timeIntervalSince1970: 1_767_225_600)
+        let location = WeatherLocation(displayName: "Moscow", latitude: 55.75, longitude: 37.62)
+        let forecast = WeatherForecast(
+            location: location,
+            hourly: (0..<25).map { hour in
+                WeatherForecastPoint(
+                    timestamp: start.addingTimeInterval(Double(hour) * 3_600),
+                    temperatureCelsius: Double(hour),
+                    relativeHumidity: 70,
+                    precipitationProbability: 20,
+                    weatherCode: 0
+                )
+            }
+        )
+
+        let periods = WeatherDisplayPeriod.make(
+            from: forecast,
+            interval: interval,
+            now: start
+        )
+
+        #expect(periods.prefix(4).count == 4)
+        #expect(periods.prefix(4).map(\.point.timestamp) == [0, interval.rawValue, interval.rawValue * 2, interval.rawValue * 3].map {
+            start.addingTimeInterval(Double($0) * 3_600)
+        })
+    }
+
+    @Test
+    func startsAtNearestFuturePointAndMapsWmoSymbolsWithLocalDayNight() {
+        let start = Date(timeIntervalSince1970: 1_767_225_600)
+        let location = WeatherLocation(displayName: "Moscow", latitude: 55.75, longitude: 37.62)
+        let forecast = WeatherForecast(location: location, hourly: [
+            WeatherForecastPoint(timestamp: start, temperatureCelsius: 0, relativeHumidity: 60, precipitationProbability: 0, weatherCode: 0),
+            WeatherForecastPoint(timestamp: start.addingTimeInterval(3_600), temperatureCelsius: 1, relativeHumidity: 60, precipitationProbability: 0, weatherCode: 95),
+        ])
+
+        let periods = WeatherDisplayPeriod.make(
+            from: forecast,
+            interval: .twoHours,
+            now: start.addingTimeInterval(1)
+        )
+
+        #expect(periods.map(\.point.timestamp) == [start.addingTimeInterval(3_600)])
+        #expect(WeatherDisplayPeriod.symbol(for: 95, at: start) == "cloud.bolt.rain.fill")
+        #expect(WeatherDisplayPeriod.symbol(
+            for: 0,
+            at: start,
+            timeZone: TimeZone(secondsFromGMT: 0)!
+        ) == "moon.stars.fill")
+        #expect(WeatherDisplayPeriod.timeString(
+            for: start,
+            locale: Locale(identifier: "en_GB"),
+            timeZone: TimeZone(secondsFromGMT: 3 * 3_600)!
+        ) == "03:00")
+    }
+}

@@ -115,6 +115,31 @@ struct ThemeRenderingTests {
         }
     }
 
+    @Test(arguments: QuickCalTheme.allCases)
+    func weatherPeriodUsesEveryThemeGrammar(theme: QuickCalTheme) throws {
+        let cell = WeatherPeriodCell(
+            period: WeatherDisplayPeriod(point: WeatherForecastPoint(
+                timestamp: Date(timeIntervalSince1970: 1_767_225_600),
+                temperatureCelsius: 3,
+                relativeHumidity: 70,
+                precipitationProbability: 20,
+                weatherCode: 2
+            )),
+            localization: QuickCalLocalization(
+                preferredLanguages: ["en"],
+                systemLocale: Locale(identifier: "en_US")
+            )
+        )
+        .environment(\.quickCalThemeStyle, QuickCalThemeStyle(theme: theme))
+        .frame(width: 80, height: 82)
+        .background(QuickCalThemeBackground(theme: theme))
+        let renderer = ImageRenderer(content: cell)
+        renderer.scale = 2
+
+        let image = try #require(renderer.nsImage)
+        #expect(image.size == NSSize(width: 80, height: 82))
+    }
+
     private func snapshotName(for theme: QuickCalTheme) -> String {
         "quickcal-theme-\(theme.rawValue).png"
     }

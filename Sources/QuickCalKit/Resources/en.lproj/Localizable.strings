@@ -38,3 +38,16 @@
 "vacation.remaining.many" = "Vacation: %d days remaining · until %@";
 "vacation.final_day" = "Last day of vacation · until %@";
 "vacation.today" = "Vacation today · %@";
+"weather.visibility" = "Show weather";
+"weather.location" = "Weather location";
+"weather.search_location" = "Search city";
+"weather.automatic_location" = "Use current location automatically";
+"weather.interval" = "Forecast interval";
+"weather.refresh" = "Refresh forecast";
+"weather.refreshing" = "Refreshing forecast";
+"weather.unavailable" = "Forecast is temporarily unavailable";
+"weather.updated_format" = "Updated %@";
+"weather.temperature_format" = "%.0f°";
+"weather.humidity_format" = "Humidity %d%%";
+"weather.precipitation_format" = "Precipitation %d%%";
+"weather.period_accessibility_format" = "%1$@, %2$@, humidity %3$d%%, precipitation %4$d%%";

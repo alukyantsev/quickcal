@@ -38,3 +38,16 @@
 "vacation.remaining.many" = "Отпуск: осталось %d дней · до %@";
 "vacation.final_day" = "Последний день отпуска · до %@";
 "vacation.today" = "Отпуск сегодня · %@";
+"weather.visibility" = "Показывать погоду";
+"weather.location" = "Место прогноза";
+"weather.search_location" = "Найти город";
+"weather.automatic_location" = "Определять место автоматически";
+"weather.interval" = "Интервал прогноза";
+"weather.refresh" = "Обновить прогноз";
+"weather.refreshing" = "Обновляем прогноз";
+"weather.unavailable" = "Прогноз временно недоступен";
+"weather.updated_format" = "Обновлено %@";
+"weather.temperature_format" = "%.0f°";
+"weather.humidity_format" = "Влажность %d%%";
+"weather.precipitation_format" = "Осадки %d%%";
+"weather.period_accessibility_format" = "%1$@, %2$@, влажность %3$d%%, осадки %4$d%%";
