@@ -82,8 +82,7 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
         let candidates = securities.rows.compactMap { row -> (String, Date?)? in
             guard
                 let secid = row.string("SECID"),
-                row.string("ASSETCODE")?.uppercased() == "EURUSD" ||
-                    row.string("SHORTNAME")?.uppercased().contains("EUR/USD") == true
+                isEuroDollarContract(row, secid: secid)
             else { return nil }
             return (secid, row.date("LASTTRADEDATE"))
         }
@@ -108,7 +107,7 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
                 URLQueryItem(name: "iss.only", value: "marketdata"),
                 URLQueryItem(
                     name: "marketdata.columns",
-                    value: "SECID,LAST,PREVPRICE,LASTTOPREVPRICE,TRADEDATE,TRADE_SESSION_DATE,SYSTIME"
+                    value: "SECID,LAST,PREVPRICE,LASTTOPREVPRICE,LASTCHANGE,LASTCHANGEPRC,LASTVALUE,CURRENTVALUE,TRADEDATE,TRADE_SESSION_DATE,SYSTIME"
                 ),
             ]
         )
@@ -116,12 +115,23 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
         guard let values = marketData.rows.first(where: { $0.string("SECID") == exchangeTicker }) else {
             throw ClientError.unknownTicker(requestedTicker)
         }
-        guard let price = values.double("LAST") else {
+        guard let price = values.firstDouble("LAST", "CURRENTVALUE", "LASTVALUE") else {
             throw ClientError.unknownTicker(requestedTicker)
         }
         let previous = values.double("PREVPRICE")
-        let change = values.double("LASTTOPREVPRICE") ?? previous.map { price - $0 } ?? 0
-        let percentage = previous.flatMap { $0 == 0 ? nil : (price - $0) / $0 * 100 } ?? 0
+        let reportedPercentage = values.firstDouble("LASTTOPREVPRICE", "LASTCHANGEPRC")
+        let percentage = reportedPercentage
+            ?? previous.flatMap { $0 == 0 ? nil : (price - $0) / $0 * 100 }
+            ?? 0
+        let change: Double
+        if requestedTicker == "IMOEX", let indexChange = values.double("LASTCHANGE") {
+            change = indexChange
+        } else {
+            change = previous.map { price - $0 }
+                ?? reportedPercentage.flatMap { absoluteChange(price: price, percentage: $0) }
+                ?? values.double("LASTCHANGE")
+                ?? 0
+        }
         let dataDate = values.date("TRADEDATE")
             ?? values.date("TRADE_SESSION_DATE")
             ?? values.date("SYSTIME")
@@ -156,6 +166,22 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
 
     private func rounded(_ value: Double) -> Double {
         (value * 100).rounded() / 100
+    }
+
+    private func isEuroDollarContract(_ row: ISSRow, secid: String) -> Bool {
+        let assetCode = row.string("ASSETCODE")?.uppercased()
+        if assetCode == "EURUSD" || row.string("SHORTNAME")?.uppercased().contains("EUR/USD") == true {
+            return true
+        }
+        return secid.hasPrefix("Eu")
+            && assetCode == "EU"
+            && row.string("SHORTNAME")?.uppercased().hasPrefix("EU-") == true
+    }
+
+    private func absoluteChange(price: Double, percentage: Double) -> Double? {
+        let divisor = 1 + percentage / 100
+        guard divisor != 0 else { return nil }
+        return price - price / divisor
     }
 }
 
@@ -193,6 +219,10 @@ private struct ISSRow {
     func double(_ column: String) -> Double? {
         guard let index = columns.firstIndex(of: column), index < values.count else { return nil }
         return values[index]?.doubleValue
+    }
+
+    func firstDouble(_ columns: String...) -> Double? {
+        columns.lazy.compactMap(double).first
     }
 
     func date(_ column: String) -> Date? {

@@ -133,6 +133,62 @@ struct MOEXISSMarketQuoteProviderTests {
         #expect(requests[1].url?.path == "/iss/engines/futures/markets/forts/securities/EuU6.json")
     }
 
+    @Test
+    func findsTheActiveEuroDollarContractUsingTheCurrentMOEXEuInstrumentCode() async throws {
+        let recorder = RequestRecorder(responses: [
+            HTTPDataResponse(data: Data("""
+            {"securities":{"columns":["SECID","SHORTNAME","ASSETCODE","LASTTRADEDATE"],"data":[["EuU6","Eu-9.26","Eu","2026-09-17"],["EuM6","Eu-6.26","Eu","2026-06-18"]]}}
+            """.utf8), statusCode: 200),
+            HTTPDataResponse(data: Data("""
+            {"marketdata":{"columns":["SECID","LAST","LASTTOPREVPRICE","TRADEDATE"],"data":[["EuU6",1.164,0.35,"2026-08-08"]]}}
+            """.utf8), statusCode: 200),
+        ])
+        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
+            await recorder.load(request)
+        })
+
+        let quote = try await provider.quote(for: "EUR/USD")
+
+        #expect(quote.ticker == "EUR/USD")
+        #expect(quote.price == 1.164)
+        #expect(quote.changePercent == 0.35)
+        #expect(quote.change > 0)
+        let requests = await recorder.requests
+        #expect(requests[1].url?.path == "/iss/engines/futures/markets/forts/securities/EuU6.json")
+    }
+
+    @Test
+    func readsTheIndexPriceAndDailyChangeFromTheMOEXIndexMarketdataFields() async throws {
+        let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
+        {"marketdata":{"columns":["SECID","LASTVALUE","CURRENTVALUE","LASTCHANGE","LASTCHANGEPRC","TRADEDATE"],"data":[["IMOEX",2285.88,2281.31,-4.57,-0.2,"2026-08-07"]]}}
+        """.utf8), statusCode: 200)])
+        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
+            await recorder.load(request)
+        })
+
+        let quote = try await provider.quote(for: "IMOEX")
+
+        #expect(quote.price == 2281.31)
+        #expect(quote.change == -4.57)
+        #expect(quote.changePercent == -0.2)
+    }
+
+    @Test
+    func usesTheMOEXFuturesDailyPercentInsteadOfTreatingItAsAnAbsoluteChange() async throws {
+        let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
+        {"marketdata":{"columns":["SECID","LAST","LASTTOPREVPRICE","TRADEDATE"],"data":[["USDRUBF",82.51,1.02,"2026-08-07"]]}}
+        """.utf8), statusCode: 200)])
+        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
+            await recorder.load(request)
+        })
+
+        let quote = try await provider.quote(for: "USDRUBF")
+
+        #expect(quote.changePercent == 1.02)
+        #expect(quote.change > 0)
+        #expect(abs(quote.change - 0.833) < 0.01)
+    }
+
     @Test(arguments: [
         ("TRADEDATE", "2026-08-07"),
         ("TRADE_SESSION_DATE", "2026-08-06"),
