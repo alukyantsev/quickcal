@@ -1,5 +1,6 @@
 .worktrees/
 .build/
 dist/
+graphify-out/
 .DS_Store
 .superpowers/
