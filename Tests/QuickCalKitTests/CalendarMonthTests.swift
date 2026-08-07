@@ -28,17 +28,17 @@ struct CalendarMonthTests {
     }
 
     @Test
-    func july2026UsesFiveCompleteMondayFirstWeeks() throws {
+    func july2026IncludesBoundaryWeeksAndSupplementaryWeeks() throws {
         let calendar = calendar()
         let month = try #require(CalendarMonth(
             containing: date(2026, 7, 15, calendar: calendar),
             calendar: calendar
         ))
 
-        #expect(month.weeks.count == 5)
-        #expect(month.weeks.first?.startDate == date(2026, 6, 29, calendar: calendar))
-        #expect(month.weeks.last?.days.last?.date == date(2026, 8, 2, calendar: calendar))
-        #expect(month.weeks.flatMap(\.days).count == 35)
+        #expect(month.weeks.count == 7)
+        #expect(month.weeks.first?.startDate == date(2026, 6, 22, calendar: calendar))
+        #expect(month.weeks.last?.days.last?.date == date(2026, 8, 9, calendar: calendar))
+        #expect(month.weeks.flatMap(\.days).count == 49)
     }
 
     @Test
@@ -58,18 +58,16 @@ struct CalendarMonthTests {
     }
 
     @Test
-    func weekdaySymbolsFollowFirstWeekday() throws {
-        let mondayMonth = try #require(CalendarMonth(
-            containing: Date(timeIntervalSince1970: 0),
-            calendar: calendar(firstWeekday: 2)
-        ))
+    func weekdaySymbolsAndWeeksAlwaysStartOnMonday() throws {
         let sundayMonth = try #require(CalendarMonth(
-            containing: Date(timeIntervalSince1970: 0),
+            containing: date(2026, 7, 15, calendar: calendar(firstWeekday: 1)),
             calendar: calendar(firstWeekday: 1)
         ))
 
-        #expect(mondayMonth.weekdaySymbols.first == "Mon")
-        #expect(sundayMonth.weekdaySymbols.first == "Sun")
+        #expect(sundayMonth.weekdaySymbols.first == "Mon")
+        #expect(sundayMonth.weeks.allSatisfy {
+            calendar(firstWeekday: 2).component(.weekday, from: $0.startDate) == 2
+        })
     }
 
     @Test
@@ -115,6 +113,32 @@ struct CalendarMonthTests {
             calendar: calendar
         ))
 
-        #expect(month.weeks.map(\.weekOfYear) == [27, 28, 29, 30, 31])
+        #expect(month.weeks.map(\.weekOfYear) == [26, 27, 28, 29, 30, 31, 32])
+    }
+
+    @Test
+    func decemberSupplementaryWeekIncludesFollowingYear() throws {
+        let calendar = calendar()
+        let month = try #require(CalendarMonth(
+            containing: date(2026, 12, 15, calendar: calendar),
+            calendar: calendar
+        ))
+
+        #expect(month.weeks.first?.startDate == date(2026, 11, 23, calendar: calendar))
+        #expect(month.weeks.last?.days.last?.date == date(2027, 1, 10, calendar: calendar))
+        #expect(month.displayedYears == [2026, 2027])
+    }
+
+    @Test
+    func august2026KeepsSixBoundaryWeeksAndAddsTwoSupplementaryWeeks() throws {
+        let calendar = calendar()
+        let month = try #require(CalendarMonth(
+            containing: date(2026, 8, 15, calendar: calendar),
+            calendar: calendar
+        ))
+
+        #expect(month.weeks.count == 8)
+        #expect(month.weeks.first?.startDate == date(2026, 7, 20, calendar: calendar))
+        #expect(month.weeks.last?.days.last?.date == date(2026, 9, 13, calendar: calendar))
     }
 }

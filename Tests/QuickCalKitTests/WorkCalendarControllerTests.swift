@@ -26,13 +26,19 @@ struct WorkCalendarControllerTests {
 
     private actor SequencedClient: IsDayOffLoading {
         private var responses: [Data]
+        private var requestedYears: [Int] = []
 
         init(responses: [Data]) {
             self.responses = responses
         }
 
         func fetch(year: Int) async throws -> Data {
-            responses.removeFirst()
+            requestedYears.append(year)
+            return responses.removeFirst()
+        }
+
+        func years() -> Set<Int> {
+            Set(requestedYears)
         }
     }
 
@@ -105,5 +111,36 @@ struct WorkCalendarControllerTests {
         await controller.load(month: month)
 
         #expect(controller.status(for: januaryFirst) == .nonWorking)
+    }
+
+    @Test
+    @MainActor
+    func loadsEveryYearInTheExtendedDisplayRange() async throws {
+        let timeZone = TimeZone(secondsFromGMT: 0)!
+        let client = SequencedClient(responses: [rawData(firstCode: 48), rawData(firstCode: 48)])
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("quickcal-controller-tests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let repository = RussianWorkCalendarRepository(
+            client: client,
+            cache: RussianWorkCalendarCache(directory: directory),
+            timeZone: timeZone
+        )
+        let controller = WorkCalendarController(
+            repository: repository,
+            timeZone: timeZone,
+            now: { date(2026, 7, 29) }
+        )
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let month = try #require(CalendarMonth(
+            containing: date(2026, 12, 15),
+            calendar: calendar
+        ))
+
+        await controller.load(month: month)
+
+        let requestedYears = await client.years()
+        #expect(requestedYears == [2026, 2027])
     }
 }

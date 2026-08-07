@@ -1,3 +1,5 @@
+import Foundation
+
 public enum SelectionSegment: Equatable, Sendable {
     case none
     case isolated
@@ -14,10 +16,10 @@ public enum SelectionSegment: Equatable, Sendable {
             return .none
         }
 
-        let hasSelectedPrevious = index > week.startIndex
-            && selectedDates.contains(week[index - 1])
-        let hasSelectedNext = index < week.index(before: week.endIndex)
-            && selectedDates.contains(week[index + 1])
+        let hasSelectedPrevious = adjacent(to: week[index], by: -1)
+            .map { selectedDates.contains($0) } ?? false
+        let hasSelectedNext = adjacent(to: week[index], by: 1)
+            .map { selectedDates.contains($0) } ?? false
 
         switch (hasSelectedPrevious, hasSelectedNext) {
         case (false, false):
@@ -29,5 +31,21 @@ public enum SelectionSegment: Equatable, Sendable {
         case (true, false):
             return .trailing
         }
+    }
+
+    private static func adjacent(
+        to date: CalendarDate,
+        by dayOffset: Int
+    ) -> CalendarDate? {
+        let timeZone = TimeZone(secondsFromGMT: 0)!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        guard
+            let source = date.date(in: timeZone),
+            let adjacent = calendar.date(byAdding: .day, value: dayOffset, to: source)
+        else {
+            return nil
+        }
+        return CalendarDate(date: adjacent, timeZone: timeZone)
     }
 }

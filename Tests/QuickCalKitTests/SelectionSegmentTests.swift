@@ -36,7 +36,7 @@ struct SelectionSegmentTests {
     }
 
     @Test
-    func adjacentDatesAcrossAWeekBoundaryRemainIsolated() throws {
+    func adjacentDatesAcrossAWeekBoundaryConnectSelectionSegments() throws {
         let firstWeek = try weekDates(startingAt: 1)
         let secondWeek = try weekDates(startingAt: 8)
         let selectedDates: Set<CalendarDate> = [
@@ -48,12 +48,39 @@ struct SelectionSegmentTests {
             at: 6,
             in: firstWeek,
             selectedDates: selectedDates
-        ) == .isolated)
+        ) == .leading)
         #expect(SelectionSegment.forDay(
             at: 0,
             in: secondWeek,
             selectedDates: selectedDates
-        ) == .isolated)
+        ) == .trailing)
+    }
+
+    @Test
+    func adjacentDatesAcrossAMonthBoundaryConnectSelectionSegments() throws {
+        let july31 = try #require(CalendarDate(year: 2026, month: 7, day: 31))
+        let august1 = try #require(CalendarDate(year: 2026, month: 8, day: 1))
+        let week = [
+            try #require(CalendarDate(year: 2026, month: 7, day: 27)),
+            try #require(CalendarDate(year: 2026, month: 7, day: 28)),
+            try #require(CalendarDate(year: 2026, month: 7, day: 29)),
+            try #require(CalendarDate(year: 2026, month: 7, day: 30)),
+            july31,
+            august1,
+            try #require(CalendarDate(year: 2026, month: 8, day: 2)),
+        ]
+        let selectedDates: Set<CalendarDate> = [july31, august1]
+
+        #expect(SelectionSegment.forDay(
+            at: 4,
+            in: week,
+            selectedDates: selectedDates
+        ) == .leading)
+        #expect(SelectionSegment.forDay(
+            at: 5,
+            in: week,
+            selectedDates: selectedDates
+        ) == .trailing)
     }
 
     @Test

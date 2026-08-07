@@ -33,27 +33,31 @@ public struct CalendarMonth: Sendable {
         guard symbols.count == 7 else {
             return symbols
         }
-        let offset = min(max(calendar.firstWeekday - 1, 0), 6)
-        return Array(symbols[offset...]) + Array(symbols[..<offset])
+        return Array(symbols[1...]) + Array(symbols[..<1])
     }
 
     public var weeks: [CalendarWeek] {
+        var weekCalendar = calendar
+        weekCalendar.firstWeekday = 2
+
         guard
             let monthInterval = calendar.dateInterval(of: .month, for: start),
             let lastDay = calendar.date(byAdding: .day, value: -1, to: monthInterval.end),
-            let firstWeek = calendar.dateInterval(of: .weekOfYear, for: monthInterval.start),
-            let lastWeek = calendar.dateInterval(of: .weekOfYear, for: lastDay)
+            let firstWeek = weekCalendar.dateInterval(of: .weekOfYear, for: monthInterval.start),
+            let lastWeek = weekCalendar.dateInterval(of: .weekOfYear, for: lastDay),
+            let firstSupplementaryWeek = weekCalendar.date(byAdding: .day, value: -7, to: firstWeek.start),
+            let lastSupplementaryWeekEnd = weekCalendar.date(byAdding: .day, value: 7, to: lastWeek.end)
         else {
             return []
         }
 
         let displayed = calendar.dateComponents([.year, .month], from: start)
         var result: [CalendarWeek] = []
-        var weekStart = firstWeek.start
+        var weekStart = firstSupplementaryWeek
 
-        while weekStart < lastWeek.end {
+        while weekStart < lastSupplementaryWeekEnd {
             let days = (0..<7).compactMap { offset -> CalendarDay? in
-                guard let date = calendar.date(byAdding: .day, value: offset, to: weekStart) else {
+                guard let date = weekCalendar.date(byAdding: .day, value: offset, to: weekStart) else {
                     return nil
                 }
                 let components = calendar.dateComponents([.year, .month, .day], from: date)
@@ -68,13 +72,13 @@ public struct CalendarMonth: Sendable {
             if days.count == 7 {
                 result.append(CalendarWeek(
                     startDate: weekStart,
-                    weekOfYear: calendar.component(.weekOfYear, from: weekStart),
+                    weekOfYear: weekCalendar.component(.weekOfYear, from: weekStart),
                     days: days
                 ))
             }
 
             guard
-                let next = calendar.date(byAdding: .day, value: 7, to: weekStart),
+                let next = weekCalendar.date(byAdding: .day, value: 7, to: weekStart),
                 next > weekStart
             else {
                 break
@@ -83,6 +87,12 @@ public struct CalendarMonth: Sendable {
         }
 
         return result
+    }
+
+    public var displayedYears: Set<Int> {
+        Set(weeks.flatMap(\.days).compactMap {
+            calendar.dateComponents([.year], from: $0.date).year
+        })
     }
 
     public func shifted(by monthOffset: Int) -> CalendarMonth? {
