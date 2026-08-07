@@ -6,3 +6,4 @@
 - W02 — Обновление прогноза и automatic location — done
 - W03 — Погодная лента и настройки во всех темах — done
 - W04 — Lifecycle и release verification погоды — done
+- W05 — Состояние и визуальная согласованность меню погоды — done

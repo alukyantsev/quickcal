@@ -49,13 +49,6 @@ struct WeatherDisplayPeriod: Equatable, Identifiable {
     }
 }
 
-private struct WeatherRailLeadingPreference: PreferenceKey {
-    static let defaultValue: [Int: CGFloat] = [:]
-    static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, latest in latest })
-    }
-}
-
 @MainActor
 struct WeatherRailView: View {
     @ObservedObject var controller: WeatherController
@@ -68,11 +61,15 @@ struct WeatherRailView: View {
 
     var body: some View {
         Group {
-            switch controller.state {
-            case .fresh(let forecast): rail(for: forecast, staleAt: nil)
-            case .stale(let forecast, let fetchedAt): rail(for: forecast, staleAt: fetchedAt)
-            case .unavailable: unavailable
-            case .noLocation: EmptyView()
+            if controller.settings.isVisible {
+                switch controller.state {
+                case .fresh(let forecast): rail(for: forecast, staleAt: nil)
+                case .stale(let forecast, let fetchedAt): rail(for: forecast, staleAt: fetchedAt)
+                case .unavailable: unavailable
+                case .noLocation: EmptyView()
+                }
+            } else {
+                EmptyView()
             }
         }
         .accessibilityElement(children: .contain)
@@ -116,50 +113,41 @@ struct WeatherRailView: View {
 
     private func periodScroller(_ periods: [WeatherDisplayPeriod]) -> some View {
         GeometryReader { geometry in
-            ScrollViewReader { proxy in
-                ZStack(alignment: .center) {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 0) {
-                            ForEach(Array(periods.enumerated()), id: \.element.id) { index, period in
-                                WeatherPeriodCell(period: period, localization: localization)
-                                    .frame(width: geometry.size.width / 4)
-                                    .id(index)
-                                    .background {
-                                        GeometryReader { itemGeometry in
-                                            Color.clear.preference(
-                                                key: WeatherRailLeadingPreference.self,
-                                                value: [index: itemGeometry.frame(in: .named("weather-rail")).minX]
-                                            )
-                                        }
-                                    }
-                            }
-                        }
-                    }
-                    .coordinateSpace(name: "weather-rail")
-                    .onPreferenceChange(WeatherRailLeadingPreference.self) { positions in
-                        guard let nearest = positions.min(by: {
-                            abs($0.value) < abs($1.value)
-                        })?.key else { return }
-                        firstVisibleIndex = nearest
-                    }
+            let lastStartIndex = max(0, periods.count - 4)
+            let startIndex = min(firstVisibleIndex, lastStartIndex)
+            let visiblePeriods = Array(periods.dropFirst(startIndex).prefix(4))
 
-                    HStack {
-                        if firstVisibleIndex > 0 {
-                            railArrow("chevron.left", title: localization.string(.previousMonth)) {
-                                scroll(to: max(0, firstVisibleIndex - 1), proxy: proxy)
-                            }
+            ZStack(alignment: .center) {
+                HStack(spacing: 0) {
+                    ForEach(Array(visiblePeriods.enumerated()), id: \.element.id) { index, period in
+                        WeatherPeriodCell(
+                            period: period,
+                            localization: localization,
+                            showsTrailingDivider: index < visiblePeriods.count - 1
+                        )
+                        .frame(width: geometry.size.width / 4)
+                    }
+                }
+
+                HStack {
+                    if startIndex > 0 {
+                        railArrow("chevron.left", title: localization.string(.previousMonth)) {
+                            moveViewport(to: max(0, startIndex - 1))
                         }
-                        Spacer()
-                        if firstVisibleIndex + 4 < periods.count {
-                            railArrow("chevron.right", title: localization.string(.nextMonth)) {
-                                scroll(to: min(periods.count - 4, firstVisibleIndex + 1), proxy: proxy)
-                            }
+                    }
+                    Spacer()
+                    if startIndex < lastStartIndex {
+                        railArrow("chevron.right", title: localization.string(.nextMonth)) {
+                            moveViewport(to: min(lastStartIndex, startIndex + 1))
                         }
                     }
                 }
             }
         }
         .frame(height: 82)
+        .onChange(of: controller.settings.interval) { _, _ in
+            firstVisibleIndex = 0
+        }
     }
 
     private func railArrow(
@@ -220,9 +208,14 @@ struct WeatherRailView: View {
         )
     }
 
-    private func scroll(to index: Int, proxy: ScrollViewProxy) {
-        let action = { proxy.scrollTo(index, anchor: .leading) }
-        if reduceMotion { action() } else { withAnimation(.easeInOut(duration: 0.16), action) }
+    private func moveViewport(to index: Int) {
+        if reduceMotion {
+            firstVisibleIndex = index
+        } else {
+            withAnimation(.easeInOut(duration: 0.16)) {
+                firstVisibleIndex = index
+            }
+        }
     }
 
     private static func updatedString(_ date: Date) -> String {
@@ -237,6 +230,7 @@ struct WeatherRailView: View {
 struct WeatherPeriodCell: View {
     let period: WeatherDisplayPeriod
     let localization: QuickCalLocalization
+    let showsTrailingDivider: Bool
 
     @Environment(\.quickCalThemeStyle) private var themeStyle
 
@@ -262,7 +256,9 @@ struct WeatherPeriodCell: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(themeStyle.primaryText)
         .overlay(alignment: .trailing) {
-            Rectangle().fill(themeStyle.dividerColor).frame(width: 1).padding(.vertical, 3)
+            if showsTrailingDivider {
+                Rectangle().fill(themeStyle.dividerColor).frame(width: 1).padding(.vertical, 3)
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: localization.format(

@@ -128,7 +128,8 @@ struct ThemeRenderingTests {
             localization: QuickCalLocalization(
                 preferredLanguages: ["en"],
                 systemLocale: Locale(identifier: "en_US")
-            )
+            ),
+            showsTrailingDivider: true
         )
         .environment(\.quickCalThemeStyle, QuickCalThemeStyle(theme: theme))
         .frame(width: 80, height: 82)

@@ -167,22 +167,24 @@ struct CompactCheckboxToggleStyle: ToggleStyle {
     @Environment(\.quickCalThemeStyle) private var themeStyle
 
     func makeBody(configuration: Configuration) -> some View {
-        Button {
-            configuration.isOn.toggle()
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: configuration.isOn
-                    ? "checkmark.square.fill"
-                    : "square"
-                )
-                .font(.system(size: 13, weight: .semibold))
-                .frame(width: 15, height: 15)
+        HoverSurface(horizontalPadding: 0, verticalPadding: 0) {
+            Button {
+                configuration.isOn.toggle()
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: configuration.isOn
+                        ? "checkmark.square.fill"
+                        : "square"
+                    )
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 15, height: 15)
 
-                configuration.label
+                    configuration.label
+                }
+                .foregroundStyle(themeStyle.secondaryText)
+                .contentShape(Rectangle())
             }
-            .foregroundStyle(themeStyle.secondaryText)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
     }
 }

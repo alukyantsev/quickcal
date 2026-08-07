@@ -23,6 +23,212 @@ private enum QuickCalHeaderPanel {
 }
 
 @MainActor
+private struct WeatherOptionsView: View {
+    @ObservedObject var controller: WeatherController
+
+    @Environment(\.quickCalThemeStyle) private var themeStyle
+    @State private var locationQuery = ""
+    @State private var locationResults: [WeatherLocation] = []
+    @State private var searchTask: Task<Void, Never>?
+    @State private var suppressNextSearch = false
+
+    private let localization = QuickCalLocalization.current
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Toggle(
+                localization.string(.weatherVisibility),
+                isOn: Binding(
+                    get: { controller.settings.isVisible },
+                    set: { controller.setVisibility($0) }
+                )
+            )
+            .toggleStyle(CompactCheckboxToggleStyle())
+            .font(.system(size: 13))
+            .foregroundStyle(themeStyle.primaryText)
+            .padding(.horizontal, 7)
+            .frame(height: 29)
+
+            if controller.settings.isVisible {
+                locationControls
+                automaticLocationToggle
+                intervalControls
+            }
+        }
+        .onAppear(perform: restoreManualLocationName)
+        .onDisappear { searchTask?.cancel() }
+    }
+
+    @ViewBuilder
+    private var locationControls: some View {
+        Text(verbatim: localization.string(.weatherLocation))
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(themeStyle.primaryText)
+            .padding(.horizontal, 7)
+
+        if controller.settings.locationMode == .automatic,
+           let location = controller.settings.automaticLocation
+        {
+            currentLocationRow(location)
+        } else {
+            TextField(
+                localization.string(.weatherSearchLocation),
+                text: $locationQuery
+            )
+            .textFieldStyle(.roundedBorder)
+            .font(.system(size: 12))
+            .padding(.horizontal, 7)
+            .onChange(of: locationQuery) { _, query in
+                scheduleLocationSearch(for: query)
+            }
+
+            ForEach(locationResults.prefix(4), id: \.self) { location in
+                HoverSurface(horizontalPadding: 0, verticalPadding: 0) {
+                    Button {
+                        controller.setManualLocation(location)
+                        searchTask?.cancel()
+                        suppressNextSearch = true
+                        locationQuery = location.displayName
+                        locationResults = []
+                    } label: {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(verbatim: location.displayName)
+                            if let detail = locationDetail(location) {
+                                Text(verbatim: detail)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(themeStyle.secondaryText)
+                            }
+                        }
+                        .font(.system(size: 12))
+                        .foregroundStyle(themeStyle.primaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text(verbatim: locationDetail(location).map {
+                        "\(location.displayName), \($0)"
+                    } ?? location.displayName))
+                }
+            }
+        }
+    }
+
+    private func currentLocationRow(_ location: WeatherLocation) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "location.fill")
+                .font(.system(size: 11, weight: .semibold))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: location.displayName)
+                if let detail = locationDetail(location) {
+                    Text(verbatim: detail)
+                        .font(.system(size: 10))
+                        .foregroundStyle(themeStyle.secondaryText)
+                }
+            }
+            .font(.system(size: 12, weight: .medium))
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(themeStyle.primaryText)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var automaticLocationToggle: some View {
+        Toggle(
+            localization.string(.weatherAutomaticLocation),
+            isOn: Binding(
+                get: { controller.settings.locationMode == .automatic },
+                set: { controller.setAutomaticModeEnabled($0) }
+            )
+        )
+        .toggleStyle(CompactCheckboxToggleStyle())
+        .font(.system(size: 12))
+        .foregroundStyle(themeStyle.primaryText)
+        .padding(.horizontal, 7)
+        .padding(.top, 2)
+    }
+
+    private var intervalControls: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(verbatim: localization.string(.weatherInterval))
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(themeStyle.primaryText)
+
+            HStack(spacing: 4) {
+                ForEach(WeatherInterval.allCases, id: \.self) { interval in
+                    WeatherIntervalButton(
+                        interval: interval,
+                        isSelected: controller.settings.interval == interval,
+                        action: { controller.setInterval(interval) }
+                    )
+                }
+            }
+        }
+        .padding(.horizontal, 7)
+    }
+
+    private func scheduleLocationSearch(for query: String) {
+        if suppressNextSearch {
+            suppressNextSearch = false
+            return
+        }
+        searchTask?.cancel()
+        searchTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(220))
+            guard !Task.isCancelled else { return }
+            locationResults = await controller.searchLocations(query: query)
+        }
+    }
+
+    private func restoreManualLocationName() {
+        guard locationQuery.isEmpty,
+              let location = controller.settings.manualLocation
+        else { return }
+        suppressNextSearch = true
+        locationQuery = location.displayName
+    }
+
+    private func locationDetail(_ location: WeatherLocation) -> String? {
+        let detail = [location.administrativeArea, location.country]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+        return detail.isEmpty ? nil : detail
+    }
+}
+
+private struct WeatherIntervalButton: View {
+    let interval: WeatherInterval
+    let isSelected: Bool
+    let action: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.quickCalThemeStyle) private var themeStyle
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Text("\(interval.rawValue)h")
+                .font(.system(size: 11, weight: .semibold))
+                .frame(maxWidth: .infinity, minHeight: 24)
+                .background {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(isSelected ? themeStyle.todayColor : (isHovered ? themeStyle.hoverColor : .clear))
+                }
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isSelected ? themeStyle.todayText : themeStyle.primaryText)
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: reduceMotion ? 0 : 0.12), value: isHovered)
+        .accessibilityLabel(Text(verbatim: "\(interval.rawValue)"))
+        .accessibilityValue(Text(verbatim: isSelected ? QuickCalLocalization.current.string(.selected) : ""))
+    }
+}
+
+@MainActor
 struct CalendarPopoverView: View {
     @AppStorage("showWeekNumbers") private var showWeekNumbers = true
     @ObservedObject private var themeStore: QuickCalThemeStore
@@ -31,9 +237,6 @@ struct CalendarPopoverView: View {
     @StateObject private var selectedDates = SelectedDatesStore()
     @StateObject private var workCalendar = WorkCalendarController()
     @State private var activePanel: QuickCalHeaderPanel?
-    @State private var weatherSearchQuery = ""
-    @State private var weatherSearchResults: [WeatherLocation] = []
-    @State private var weatherSearchTask: Task<Void, Never>?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var systemColorScheme
@@ -119,10 +322,7 @@ struct CalendarPopoverView: View {
                     await workCalendar.load(month: month)
                 }
 
-                if let weatherController,
-                   weatherController.settings.isVisible,
-                   weatherController.settings.resolvedLocation != nil
-                {
+                if let weatherController {
                     WeatherRailView(controller: weatherController)
                 }
 
@@ -454,7 +654,6 @@ struct CalendarPopoverView: View {
                     : "square"
             ) {
                 showWeekNumbers.toggle()
-                activePanel = nil
             }
 
             popupRow(
@@ -464,7 +663,6 @@ struct CalendarPopoverView: View {
                     : "square"
             ) {
                 launchAtLogin.setEnabled(!launchAtLogin.isEnabled)
-                activePanel = nil
             }
 
             if let weatherController {
@@ -473,22 +671,7 @@ struct CalendarPopoverView: View {
                     .frame(height: 1)
                     .padding(.vertical, 2)
 
-                Toggle(
-                    localization.string(.weatherVisibility),
-                    isOn: Binding(
-                        get: { weatherController.settings.isVisible },
-                        set: { weatherController.setVisibility($0) }
-                    )
-                )
-                .toggleStyle(CompactCheckboxToggleStyle())
-                .font(.system(size: 13))
-                .foregroundStyle(popupTextColor)
-                .padding(.horizontal, 7)
-                .frame(height: 29)
-
-                if weatherController.settings.isVisible {
-                    weatherOptions(weatherController)
-                }
+                WeatherOptionsView(controller: weatherController)
             }
 
             Rectangle()
@@ -521,128 +704,31 @@ struct CalendarPopoverView: View {
         }
     }
 
-    private func weatherOptions(_ weatherController: WeatherController) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(verbatim: localization.string(.weatherLocation))
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(popupTextColor)
-                .padding(.horizontal, 7)
-
-            TextField(
-                localization.string(.weatherSearchLocation),
-                text: $weatherSearchQuery
-            )
-            .textFieldStyle(.roundedBorder)
-            .font(.system(size: 12))
-            .padding(.horizontal, 7)
-            .onChange(of: weatherSearchQuery) { _, query in
-                weatherSearchTask?.cancel()
-                weatherSearchTask = Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(220))
-                    guard !Task.isCancelled else { return }
-                    weatherSearchResults = await weatherController.searchLocations(query: query)
-                }
-            }
-
-            ForEach(weatherSearchResults.prefix(4), id: \.self) { location in
-                Button {
-                    weatherController.setManualLocation(location)
-                    weatherSearchQuery = ""
-                    weatherSearchResults = []
-                } label: {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(verbatim: location.displayName)
-                        if let detail = locationDetail(location) {
-                            Text(verbatim: detail)
-                                .font(.system(size: 10))
-                                .foregroundStyle(themeStyle.secondaryText)
-                        }
-                    }
-                    .font(.system(size: 12))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(popupTextColor)
-                .accessibilityLabel(Text(verbatim: locationDetail(location).map {
-                    "\(location.displayName), \($0)"
-                } ?? location.displayName))
-            }
-
-            Toggle(
-                localization.string(.weatherAutomaticLocation),
-                isOn: Binding(
-                    get: { weatherController.settings.locationMode == .automatic },
-                    set: { weatherController.setAutomaticModeEnabled($0) }
-                )
-            )
-            .toggleStyle(CompactCheckboxToggleStyle())
-            .font(.system(size: 12))
-            .foregroundStyle(popupTextColor)
-            .padding(.horizontal, 7)
-            .padding(.top, 2)
-
-            Text(verbatim: localization.string(.weatherInterval))
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(popupTextColor)
-                .padding(.horizontal, 7)
-
-            HStack(spacing: 4) {
-                ForEach(WeatherInterval.allCases, id: \.self) { interval in
-                    let isSelected = weatherController.settings.interval == interval
-                    Button {
-                        weatherController.setInterval(interval)
-                    } label: {
-                        Text("\(interval.rawValue)h")
-                            .font(.system(size: 11, weight: .semibold))
-                            .frame(maxWidth: .infinity, minHeight: 24)
-                            .background {
-                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                    .fill(isSelected ? themeStyle.todayColor : themeStyle.hoverColor)
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(isSelected ? themeStyle.todayText : popupTextColor)
-                    .accessibilityLabel(Text(verbatim: "\(interval.rawValue)"))
-                    .accessibilityValue(Text(verbatim: isSelected ? localization.string(.selected) : ""))
-                }
-            }
-            .padding(.horizontal, 7)
-        }
-    }
-
-    private func locationDetail(_ location: WeatherLocation) -> String? {
-        let detail = [location.administrativeArea, location.country]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty }
-            .joined(separator: ", ")
-        return detail.isEmpty ? nil : detail
-    }
-
     private func popupRow(
         title: String,
         systemImage: String,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 13, weight: .medium))
-                    .frame(width: 17)
+        HoverSurface(horizontalPadding: 0, verticalPadding: 0) {
+            Button(action: action) {
+                HStack(spacing: 8) {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 13, weight: .medium))
+                        .frame(width: 17)
 
-                Text(verbatim: title)
-                    .font(.system(size: 13))
-                    .lineLimit(1)
+                    Text(verbatim: title)
+                        .font(.system(size: 13))
+                        .lineLimit(1)
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(popupTextColor)
+                .padding(.horizontal, 7)
+                .frame(height: 29)
+                .contentShape(Rectangle())
             }
-            .foregroundStyle(popupTextColor)
-            .padding(.horizontal, 7)
-            .frame(height: 29)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
     }
 
     private func themeChoiceButton(
@@ -687,17 +773,15 @@ struct CalendarPopoverView: View {
     }
 
     private var popupBackgroundColor: Color {
-        theme.isDark ? Color(rgb: 0x24282D) : Color(rgb: 0xFFFFFF)
+        themeStyle.panelColor
     }
 
     private var popupTextColor: Color {
-        theme.isDark ? Color(rgb: 0xF5F6F7) : Color(rgb: 0x202124)
+        themeStyle.primaryText
     }
 
     private var popupDividerColor: Color {
-        theme.isDark
-            ? Color.white.opacity(0.14)
-            : Color.black.opacity(0.12)
+        themeStyle.dividerColor
     }
 
     private var monthTitle: String {
