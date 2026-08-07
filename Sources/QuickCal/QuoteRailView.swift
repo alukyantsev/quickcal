@@ -40,38 +40,38 @@ struct QuoteRailView: View {
     }
 
     private func quoteRows(_ quotes: [MarketQuote]) -> some View {
-        VStack(spacing: 0) {
+        let dataDate = quotes.allSatisfy { $0.dataDate != nil }
+            ? quotes.compactMap(\.dataDate).max()
+            : nil
+
+        return VStack(spacing: 0) {
             Rectangle()
                 .fill(themeStyle.dividerColor)
                 .frame(height: 1)
                 .padding(.bottom, 3)
+            marketDataHeader(dataDate)
             ForEach(quotes, id: \.ticker) { quote in
                 quoteRow(quote)
             }
-            if quotes.allSatisfy({ $0.dataDate != nil }),
-               let dataDate = quotes.compactMap(\.dataDate).max()
-            {
-                Text(verbatim: localization.format(.marketDataAsOfFormat, dataDateString(dataDate)))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(themeStyle.secondaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 2)
-                    .padding(.top, 2)
-                    .accessibilityLabel(Text(verbatim: localization.format(
-                        .marketDataDateAccessibilityFormat,
-                        dataDateString(dataDate)
-                    )))
-            } else {
-                Text(verbatim: localization.string(.marketDataDateUnavailable))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(themeStyle.secondaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 2)
-                    .padding(.top, 2)
-                    .accessibilityLabel(Text(verbatim: localization.string(.marketDataDateUnavailable)))
-            }
         }
         .padding(.top, themeStyle.usesWeekRules ? 5 : 3)
+    }
+
+    private func marketDataHeader(_ dataDate: Date?) -> some View {
+        let dateText = dataDate.map { marketDataDateString($0) }
+            ?? localization.string(.marketDataDateUnavailable)
+        let text = dataDate.map { _ in localization.format(.marketDataAsOfFormat, dateText) } ?? dateText
+        let accessibility = dataDate.map { _ in
+            localization.format(.marketDataDateAccessibilityFormat, dateText)
+        } ?? dateText
+
+        return Text(verbatim: text)
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(themeStyle.secondaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 2)
+            .padding(.bottom, 2)
+            .accessibilityLabel(Text(verbatim: accessibility))
     }
 
     private func quoteRow(_ quote: MarketQuote) -> some View {
@@ -251,6 +251,14 @@ struct QuoteRailView: View {
         let formatter = DateFormatter()
         formatter.locale = localization.locale
         formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    private func marketDataDateString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = localization.locale
+        formatter.dateStyle = .long
         formatter.timeStyle = .none
         return formatter.string(from: date)
     }

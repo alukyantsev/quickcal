@@ -73,7 +73,7 @@
 "market.retry_accessibility" = "Повторить загрузку котировок MOEX";
 "market.retry_hint" = "Повторно загружает котировки из MOEX";
 "market.error_accessibility" = "Котировки MOEX недоступны.";
-"market.data_as_of_format" = "Данные на %@";
+"market.data_as_of_format" = "Актуально на %@";
 "market.data_date_accessibility_format" = "Дата рыночных данных: %@";
 "market.data_date_unavailable" = "Дата рыночных данных недоступна";
 "market.quote_accessibility_format" = "%1$@, %2$@, изменение %3$@ %4$@ (%5$@), дата данных %6$@";
