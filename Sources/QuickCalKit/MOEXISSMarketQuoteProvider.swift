@@ -133,7 +133,7 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
                 URLQueryItem(name: "iss.only", value: "marketdata"),
                 URLQueryItem(
                     name: "marketdata.columns",
-                    value: "SECID,LAST,PREVPRICE,LASTTOPREVPRICE,LASTCHANGE,LASTCHANGEPRC,LASTVALUE,CURRENTVALUE,TRADEDATE,TRADE_SESSION_DATE,SYSTIME"
+                    value: "SECID,LAST,PREVPRICE,LASTTOPREVPRICE,LASTCHANGE,LASTCHANGEPRC,NUMTRADES,LASTVALUE,CURRENTVALUE,TRADEDATE,TRADE_SESSION_DATE,SYSTIME"
                 ),
             ]
         )
@@ -146,11 +146,10 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
         }
         let reportedPercentage = values.firstDouble("LASTTOPREVPRICE", "LASTCHANGEPRC")
         let reportedChange = values.double("LASTCHANGE")
-        let hasNoMovement = reportedPercentage == 0
-            && (reportedChange == nil || reportedChange == 0)
+        let hasNoTrades = values.double("NUMTRADES") == 0
         let change: Double
         let percentage: Double
-        if hasNoMovement {
+        if hasNoTrades {
             change = 0
             percentage = 0
         } else {

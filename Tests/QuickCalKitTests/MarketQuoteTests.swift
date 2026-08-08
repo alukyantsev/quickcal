@@ -261,9 +261,9 @@ struct MOEXISSMarketQuoteProviderTests {
     }
 
     @Test
-    func keepsBothChangesAtZeroWhenMOEXReportsNoMovementForTheSession() async throws {
+    func keepsBothChangesAtZeroWhenMOEXReportsNoTradesForTheSession() async throws {
         let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
-        {"marketdata":{"columns":["SECID","LAST","PREVPRICE","LASTTOPREVPRICE","LASTCHANGE","LASTCHANGEPRC","TRADEDATE"],"data":[["SBER",100,95,0,0,0,"2026-08-08"]]}}
+        {"marketdata":{"columns":["SECID","LAST","PREVPRICE","LASTTOPREVPRICE","LASTCHANGE","LASTCHANGEPRC","NUMTRADES","TRADEDATE"],"data":[["SBER",100,95,1.01,0,1.01,0,"2026-08-08"]]}}
         """.utf8), statusCode: 200)])
         let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
             await recorder.load(request)
@@ -274,6 +274,21 @@ struct MOEXISSMarketQuoteProviderTests {
         #expect(quote.price == 100)
         #expect(quote.change == 0)
         #expect(quote.changePercent == 0)
+    }
+
+    @Test
+    func retainsDailyMovementWhenMOEXReportsTradesEvenIfLastChangeIsZero() async throws {
+        let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
+        {"marketdata":{"columns":["SECID","LAST","LASTTOPREVPRICE","LASTCHANGE","NUMTRADES","TRADEDATE"],"data":[["SBER",100,0.41,0,22577,"2026-08-08"]]}}
+        """.utf8), statusCode: 200)])
+        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
+            await recorder.load(request)
+        })
+
+        let quote = try await provider.quote(for: "SBER")
+
+        #expect(quote.changePercent == 0.41)
+        #expect(quote.change > 0)
     }
 
     @Test(arguments: [
@@ -304,6 +319,7 @@ struct MOEXISSMarketQuoteProviderTests {
         let url = try #require(requests.first?.url)
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
         #expect(query?.first(where: { $0.name == "iss.only" })?.value == "marketdata")
+        #expect(query?.first(where: { $0.name == "marketdata.columns" })?.value?.contains("NUMTRADES") == true)
         #expect(query?.contains(where: { $0.name == "securities.columns" }) == false)
     }
 
