@@ -121,9 +121,10 @@ struct MOEXISSMarketQuoteProviderTests {
             secid: ticker, shortName: ticker, last: 100.5, previous: 99.5,
             date: "2026-01-01"
         )])
-        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
-            await recorder.load(request)
-        })
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { try! date("2026-01-01") }
+        )
 
         let quote = try await provider.quote(for: ticker)
 
@@ -147,9 +148,10 @@ struct MOEXISSMarketQuoteProviderTests {
             """.utf8), statusCode: 200),
             quoteResponse(secid: "EuU6", shortName: "EUR/USD Sep 2026", last: 1.125, previous: 1.12, date: "2026-08-08"),
         ])
-        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
-            await recorder.load(request)
-        })
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { try! date("2026-08-08") }
+        )
 
         let quote = try await provider.quote(for: " eur/usd ")
 
@@ -174,9 +176,10 @@ struct MOEXISSMarketQuoteProviderTests {
             {"marketdata":{"columns":["SECID","LAST","LASTTOPREVPRICE","TRADEDATE"],"data":[["EDU6",1.164,0.35,"2026-08-08"]]}}
             """.utf8), statusCode: 200),
         ])
-        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
-            await recorder.load(request)
-        })
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { try! date("2026-08-08") }
+        )
 
         let quote = try await provider.quote(for: "EUR/USD")
 
@@ -215,9 +218,10 @@ struct MOEXISSMarketQuoteProviderTests {
         let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
         {"marketdata":{"columns":["SECID","LASTVALUE","CURRENTVALUE","LASTCHANGE","LASTCHANGEPRC","TRADEDATE"],"data":[["IMOEX",2285.88,2281.31,-4.57,-0.2,"2026-08-07"]]}}
         """.utf8), statusCode: 200)])
-        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
-            await recorder.load(request)
-        })
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { try! date("2026-08-07") }
+        )
 
         let quote = try await provider.quote(for: "IMOEX")
 
@@ -231,9 +235,10 @@ struct MOEXISSMarketQuoteProviderTests {
         let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
         {"marketdata":{"columns":["SECID","CURRENTVALUE","LASTCHANGE","LASTCHANGEPRC","TRADEDATE"],"data":[["MOEXBTC",64970.92,310.95,0.48,"2026-08-07"]]}}
         """.utf8), statusCode: 200)])
-        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
-            await recorder.load(request)
-        })
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { try! date("2026-08-07") }
+        )
 
         let quote = try await provider.quote(for: "bitcoin")
 
@@ -249,9 +254,10 @@ struct MOEXISSMarketQuoteProviderTests {
         let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
         {"marketdata":{"columns":["SECID","LAST","LASTTOPREVPRICE","TRADEDATE"],"data":[["USDRUBF",82.51,1.02,"2026-08-07"]]}}
         """.utf8), statusCode: 200)])
-        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
-            await recorder.load(request)
-        })
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { try! date("2026-08-07") }
+        )
 
         let quote = try await provider.quote(for: "USDRUBF")
 
@@ -265,9 +271,10 @@ struct MOEXISSMarketQuoteProviderTests {
         let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
         {"marketdata":{"columns":["SECID","LAST","PREVPRICE","LASTTOPREVPRICE","LASTCHANGE","LASTCHANGEPRC","NUMTRADES","TRADEDATE"],"data":[["SBER",100,95,1.01,0,1.01,0,"2026-08-08"]]}}
         """.utf8), statusCode: 200)])
-        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
-            await recorder.load(request)
-        })
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { try! date("2026-08-08") }
+        )
 
         let quote = try await provider.quote(for: "SBER")
 
@@ -277,13 +284,31 @@ struct MOEXISSMarketQuoteProviderTests {
     }
 
     @Test
+    func keepsPriceButResetsChangesWhenTheMOEXQuoteIsFromAPreviousMoscowDay() async throws {
+        let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
+        {"marketdata":{"columns":["SECID","LAST","LASTTOPREVPRICE","LASTCHANGE","NUMTRADES","TRADEDATE"],"data":[["USDRUBF",82.55,0.05,-0.06,1729,"2026-08-08"]]}}
+        """.utf8), statusCode: 200)])
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { try! date("2026-08-09") }
+        )
+
+        let quote = try await provider.quote(for: "USDRUBF")
+
+        #expect(quote.price == 82.55)
+        #expect(quote.change == 0)
+        #expect(quote.changePercent == 0)
+    }
+
+    @Test
     func retainsDailyMovementWhenMOEXReportsTradesEvenIfLastChangeIsZero() async throws {
         let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
         {"marketdata":{"columns":["SECID","LAST","LASTTOPREVPRICE","LASTCHANGE","NUMTRADES","TRADEDATE"],"data":[["SBER",100,0.41,0,22577,"2026-08-08"]]}}
         """.utf8), statusCode: 200)])
-        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
-            await recorder.load(request)
-        })
+        let provider = try MOEXISSMarketQuoteProvider(
+            loader: HTTPDataLoader { request in await recorder.load(request) },
+            now: { try! date("2026-08-08") }
+        )
 
         let quote = try await provider.quote(for: "SBER")
 

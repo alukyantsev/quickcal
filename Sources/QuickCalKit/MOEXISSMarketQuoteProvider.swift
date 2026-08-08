@@ -12,6 +12,12 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
 
     public static let defaultEndpoint = URL(string: "https://iss.moex.com/iss")!
 
+    private static var moexCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Moscow")!
+        return calendar
+    }
+
     private let endpoint: URL
     private let timeout: TimeInterval
     private let loader: HTTPDataLoader
@@ -146,10 +152,16 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
         }
         let reportedPercentage = values.firstDouble("LASTTOPREVPRICE", "LASTCHANGEPRC")
         let reportedChange = values.double("LASTCHANGE")
+        let dataDate = values.date("TRADEDATE")
+            ?? values.date("TRADE_SESSION_DATE")
+            ?? values.date("SYSTIME")
         let hasNoTrades = values.double("NUMTRADES") == 0
+        let isCurrentMOEXDay = dataDate.map {
+            Self.moexCalendar.isDate($0, inSameDayAs: now())
+        } ?? true
         let change: Double
         let percentage: Double
-        if hasNoTrades {
+        if hasNoTrades || !isCurrentMOEXDay {
             change = 0
             percentage = 0
         } else {
@@ -170,9 +182,6 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
                 ?? percentageChange(price: price, absoluteChange: change)
                 ?? 0
         }
-        let dataDate = values.date("TRADEDATE")
-            ?? values.date("TRADE_SESSION_DATE")
-            ?? values.date("SYSTIME")
         return MarketQuote(
             ticker: requestedTicker,
             displayName: displayName,
