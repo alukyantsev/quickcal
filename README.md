@@ -38,8 +38,8 @@ QuickCal — локальный календарь в строке меню macO
 ## Интерфейс
 
 <p align="center">
-  <img src="docs/evidence/quickcal-calendar-enhancements.png" width="342" alt="QuickCal: календарь, выделенный отпуск и дополнительные настройки">
-  <img src="docs/evidence/quickcal-six-themes-system-light.png" width="360" alt="QuickCal: светлая системная тема">
+  <img src="docs/evidence/quickcal-v2.1-quotes-overview.png" width="376" alt="QuickCal 2.1: календарь и включённая рыночная сводка">
+  <img src="docs/evidence/quickcal-v2.1-quotes-detail.png" width="376" alt="QuickCal 2.1: плотная таблица котировок в тёмной теме">
 </p>
 
 ## Требования
