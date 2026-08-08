@@ -131,6 +131,7 @@ enum WeatherRailPaging {
 struct WeatherRailView: View {
     @ObservedObject var controller: WeatherController
     var onRefresh: (() -> Void)?
+    var usesWheelPager = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.quickCalThemeStyle) private var themeStyle
@@ -210,6 +211,7 @@ struct WeatherRailView: View {
                             .frame(width: geometry.size.width / 4)
                         }
                     }
+                    .frame(height: 82)
                 }
 
                 HStack {
@@ -238,14 +240,16 @@ struct WeatherRailView: View {
                 .offset(y: 7)
             }
             .background {
-                WeatherRailWheelPager { direction in
-                    let nextIndex = WeatherRailPaging.nextStartIndex(
-                        from: startIndex,
-                        direction: direction == .forward ? 1 : -1,
-                        periodCount: periods.count
-                    )
-                    guard nextIndex != startIndex else { return }
-                    moveViewport(to: nextIndex)
+                if usesWheelPager {
+                    WeatherRailWheelPager { direction in
+                        let nextIndex = WeatherRailPaging.nextStartIndex(
+                            from: startIndex,
+                            direction: direction == .forward ? 1 : -1,
+                            periodCount: periods.count
+                        )
+                        guard nextIndex != startIndex else { return }
+                        moveViewport(to: nextIndex)
+                    }
                 }
             }
         }

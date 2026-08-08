@@ -17,7 +17,7 @@ import AppKit
 import SwiftUI
 import QuickCalKit
 
-private enum QuickCalHeaderPanel {
+enum QuickCalHeaderPanel {
     case themes
     case options
 }
@@ -362,6 +362,7 @@ struct CalendarPopoverView: View {
     private let quoteController: QuoteController?
     private let refreshCoordinator: ForegroundRefreshCoordinator?
     private let onRefresh: (() -> Void)?
+    private let usesWeatherWheelPager: Bool
 
     init(
         themeStore: QuickCalThemeStore,
@@ -369,13 +370,17 @@ struct CalendarPopoverView: View {
         quoteController: QuoteController? = nil,
         refreshCoordinator: ForegroundRefreshCoordinator? = nil,
         onRefresh: (() -> Void)? = nil,
+        initialActivePanel: QuickCalHeaderPanel? = nil,
+        usesWeatherWheelPager: Bool = true,
         onThemeChanged: @escaping (QuickCalTheme) -> Void
     ) {
         _themeStore = ObservedObject(wrappedValue: themeStore)
+        _activePanel = State(initialValue: initialActivePanel)
         self.weatherController = weatherController
         self.quoteController = quoteController
         self.refreshCoordinator = refreshCoordinator
         self.onRefresh = onRefresh
+        self.usesWeatherWheelPager = usesWeatherWheelPager
         self.onThemeChanged = onThemeChanged
     }
 
@@ -464,7 +469,11 @@ struct CalendarPopoverView: View {
                 }
 
                 if let weatherController {
-                    WeatherRailView(controller: weatherController, onRefresh: onRefresh)
+                    WeatherRailView(
+                        controller: weatherController,
+                        onRefresh: onRefresh,
+                        usesWheelPager: usesWeatherWheelPager
+                    )
                 }
 
                 if let quoteController {

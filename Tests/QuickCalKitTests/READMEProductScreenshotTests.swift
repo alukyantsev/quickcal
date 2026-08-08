@@ -8,6 +8,8 @@ import QuickCalKit
 @Suite(.serialized)
 @MainActor
 struct READMEProductScreenshotTests {
+    private let snapshotDate = Date(timeIntervalSince1970: 1_786_174_240)
+
     private actor QuoteProvider: MarketQuoteProviding {
         func quote(for ticker: String) async throws -> MarketQuote {
             let quote = switch ticker {
@@ -32,6 +34,28 @@ struct READMEProductScreenshotTests {
         }
     }
 
+    private actor WeatherProvider: WeatherForecastProviding {
+        private let forecast: WeatherForecast
+
+        init(forecast: WeatherForecast) {
+            self.forecast = forecast
+        }
+
+        func searchLocations(query: String) async throws -> [WeatherLocation] { [] }
+
+        func forecast(for location: WeatherLocation) async throws -> WeatherForecast {
+            forecast
+        }
+    }
+
+    private final class LocationService: WeatherLocationServicing {
+        var authorizationStatus: WeatherLocationAuthorization = .denied
+        var authorizationStatusChanged: (@MainActor (WeatherLocationAuthorization) -> Void)?
+
+        func requestAuthorization() {}
+        func currentLocation() async throws -> WeatherLocation { fatalError("not used") }
+    }
+
     @Test
     func rendersCurrentProductScreenshotsForREADME() async throws {
         guard let outputDirectory = ProcessInfo.processInfo.environment[
@@ -44,12 +68,30 @@ struct READMEProductScreenshotTests {
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let previousLanguages = UserDefaults.standard.object(forKey: "AppleLanguages")
+        let previousSelectedDates = UserDefaults.standard.data(
+            forKey: SelectedDatesStore.defaultKey
+        )
         UserDefaults.standard.set(["ru-RU"], forKey: "AppleLanguages")
+        let selectedVacation = [8, 9, 10, 11].compactMap {
+            CalendarDate(year: 2026, month: 8, day: $0)
+        }
+        UserDefaults.standard.set(
+            try JSONEncoder().encode(selectedVacation),
+            forKey: SelectedDatesStore.defaultKey
+        )
         defer {
             if let previousLanguages {
                 UserDefaults.standard.set(previousLanguages, forKey: "AppleLanguages")
             } else {
                 UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+            }
+            if let previousSelectedDates {
+                UserDefaults.standard.set(
+                    previousSelectedDates,
+                    forKey: SelectedDatesStore.defaultKey
+                )
+            } else {
+                UserDefaults.standard.removeObject(forKey: SelectedDatesStore.defaultKey)
             }
         }
         defaults.set(QuickCalTheme.systemLight.rawValue, forKey: QuickCalThemeStore.defaultKey)
@@ -63,10 +105,56 @@ struct READMEProductScreenshotTests {
         controller.setVisibility(true)
         await controller.refreshNow()
 
+        let location = WeatherLocation(
+            displayName: "Москва",
+            countryCode: "RU",
+            latitude: 55.75,
+            longitude: 37.62
+        )
+        let weatherStart = Date().addingTimeInterval(3_600)
+        let hourOffsets = Array(0...15)
+        let hourly: [WeatherForecastPoint] = hourOffsets.map { offset in
+            WeatherForecastPoint(
+                timestamp: weatherStart.addingTimeInterval(Double(offset) * 3_600),
+                temperatureCelsius: 18 + Double(offset / 4),
+                relativeHumidity: 58,
+                precipitationProbability: offset == 8 ? 35 : 5,
+                weatherCode: offset == 8 ? 2 : 0
+            )
+        }
+        let forecast = WeatherForecast(location: location, hourly: hourly)
+        let weatherSettings = WeatherSettingsStore(
+            userDefaults: defaults,
+            key: "weather-settings"
+        )
+        weatherSettings.update(WeatherSettings(
+            isVisible: true,
+            manualLocation: location
+        ))
+        let weatherController = WeatherController(
+            settingsStore: weatherSettings,
+            cacheStore: WeatherForecastCacheStore(
+                userDefaults: defaults,
+                key: "weather-cache"
+            ),
+            provider: WeatherProvider(forecast: forecast),
+            locationService: LocationService(),
+            now: { Date(timeIntervalSince1970: 1_786_174_240) }
+        )
+        let refreshCoordinator = ForegroundRefreshCoordinator(
+            weatherController: weatherController,
+            quoteController: controller,
+            now: { Date(timeIntervalSince1970: 1_786_174_240) }
+        )
+        await refreshCoordinator.refreshNow()
+
         let store = QuickCalThemeStore(userDefaults: defaults)
         let overviewRenderer = ImageRenderer(content: CalendarPopoverView(
                 themeStore: store,
+                weatherController: weatherController,
                 quoteController: controller,
+                refreshCoordinator: refreshCoordinator,
+                usesWeatherWheelPager: false,
                 onThemeChanged: { _ in }
             ))
         overviewRenderer.scale = 2
@@ -74,6 +162,21 @@ struct READMEProductScreenshotTests {
             try #require(overviewRenderer.nsImage),
             to: URL(fileURLWithPath: outputDirectory)
                 .appendingPathComponent("quickcal-v2.1-quotes-overview.png")
+        )
+
+        let settingsView = CalendarPopoverView(
+                themeStore: store,
+                weatherController: weatherController,
+                quoteController: controller,
+                refreshCoordinator: refreshCoordinator,
+                initialActivePanel: .options,
+                usesWeatherWheelPager: false,
+                onThemeChanged: { _ in }
+            )
+        try save(
+            try #require(renderInHostingView(settingsView)),
+            to: URL(fileURLWithPath: outputDirectory)
+                .appendingPathComponent("quickcal-v2.1-settings.png")
         )
 
         let rail = QuoteRailView(controller: controller)
@@ -99,5 +202,35 @@ struct READMEProductScreenshotTests {
             withIntermediateDirectories: true
         )
         try pngData.write(to: url, options: .atomic)
+    }
+
+    private func renderInHostingView<V: View>(_ view: V) -> NSImage? {
+        let hostingView = NSHostingView(rootView: view)
+        let size = hostingView.fittingSize
+        guard size.width > 0, size.height > 0 else { return nil }
+        hostingView.frame = NSRect(origin: .zero, size: size)
+        hostingView.layoutSubtreeIfNeeded()
+        let pixelWidth = Int(size.width * 2)
+        let pixelHeight = Int(size.height * 2)
+        guard let bitmap = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: pixelWidth,
+            pixelsHigh: pixelHeight,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bitmapFormat: [],
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else {
+            return nil
+        }
+        bitmap.size = size
+        hostingView.cacheDisplay(in: hostingView.bounds, to: bitmap)
+        let image = NSImage(size: size)
+        image.addRepresentation(bitmap)
+        return image
     }
 }
