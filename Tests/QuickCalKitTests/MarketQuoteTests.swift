@@ -260,6 +260,22 @@ struct MOEXISSMarketQuoteProviderTests {
         #expect(abs(quote.change - 0.833) < 0.01)
     }
 
+    @Test
+    func keepsBothChangesAtZeroWhenMOEXReportsNoMovementForTheSession() async throws {
+        let recorder = RequestRecorder(responses: [HTTPDataResponse(data: Data("""
+        {"marketdata":{"columns":["SECID","LAST","PREVPRICE","LASTTOPREVPRICE","LASTCHANGE","LASTCHANGEPRC","TRADEDATE"],"data":[["SBER",100,95,0,0,0,"2026-08-08"]]}}
+        """.utf8), statusCode: 200)])
+        let provider = try MOEXISSMarketQuoteProvider(loader: HTTPDataLoader { request in
+            await recorder.load(request)
+        })
+
+        let quote = try await provider.quote(for: "SBER")
+
+        #expect(quote.price == 100)
+        #expect(quote.change == 0)
+        #expect(quote.changePercent == 0)
+    }
+
     @Test(arguments: [
         ("TRADEDATE", "2026-08-07"),
         ("TRADE_SESSION_DATE", "2026-08-06"),
@@ -320,8 +336,9 @@ struct MOEXISSMarketQuoteProviderTests {
     private func quoteResponse(
         secid: String, shortName: String, last: Double, previous: Double, date: String
     ) -> HTTPDataResponse {
-        HTTPDataResponse(data: Data("""
-        {"marketdata":{"columns":["SECID","LAST","PREVPRICE","TRADEDATE"],"data":[["\(secid)",\(last),\(previous),"\(date)"]]}}
+        let percentage = (last - previous) / previous * 100
+        return HTTPDataResponse(data: Data("""
+        {"marketdata":{"columns":["SECID","LAST","PREVPRICE","LASTTOPREVPRICE","TRADEDATE"],"data":[["\(secid)",\(last),\(previous),\(percentage),"\(date)"]]}}
         """.utf8), statusCode: 200)
     }
 

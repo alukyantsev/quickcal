@@ -144,18 +144,31 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
         guard let price = values.firstDouble("LAST", "CURRENTVALUE", "LASTVALUE") else {
             throw ClientError.unknownTicker(requestedTicker)
         }
-        let previous = values.double("PREVPRICE")
         let reportedPercentage = values.firstDouble("LASTTOPREVPRICE", "LASTCHANGEPRC")
-        let percentage = reportedPercentage
-            ?? previous.flatMap { $0 == 0 ? nil : (price - $0) / $0 * 100 }
-            ?? 0
+        let reportedChange = values.double("LASTCHANGE")
+        let hasNoMovement = reportedPercentage == 0
+            && (reportedChange == nil || reportedChange == 0)
         let change: Double
-        if ["IMOEX", "MOEXBTC"].contains(requestedTicker), let indexChange = values.double("LASTCHANGE") {
-            change = indexChange
+        let percentage: Double
+        if hasNoMovement {
+            change = 0
+            percentage = 0
         } else {
-            change = previous.map { price - $0 }
-                ?? reportedPercentage.flatMap { absoluteChange(price: price, percentage: $0) }
-                ?? values.double("LASTCHANGE")
+            if ["IMOEX", "MOEXBTC"].contains(requestedTicker) {
+                change = reportedChange
+                    ?? reportedPercentage.flatMap {
+                        absoluteChange(price: price, percentage: $0)
+                    }
+                    ?? 0
+            } else {
+                change = reportedPercentage.flatMap {
+                    absoluteChange(price: price, percentage: $0)
+                }
+                ?? reportedChange
+                ?? 0
+            }
+            percentage = reportedPercentage
+                ?? percentageChange(price: price, absoluteChange: change)
                 ?? 0
         }
         let dataDate = values.date("TRADEDATE")
@@ -192,6 +205,15 @@ public struct MOEXISSMarketQuoteProvider: MarketQuoteProviding, Sendable {
 
     private func rounded(_ value: Double) -> Double {
         (value * 100).rounded() / 100
+    }
+
+    private func percentageChange(
+        price: Double,
+        absoluteChange: Double
+    ) -> Double? {
+        let previous = price - absoluteChange
+        guard previous != 0 else { return nil }
+        return absoluteChange / previous * 100
     }
 
     private func isFuturesContract(_ row: ISSRow, secid: String, assetCode: String) -> Bool {
