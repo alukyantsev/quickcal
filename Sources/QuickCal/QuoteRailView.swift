@@ -4,7 +4,7 @@ import QuickCalKit
 @MainActor
 struct QuoteRailView: View {
     private enum Column {
-        static let price: CGFloat = 66
+        static let priceWithDirection: CGFloat = 80
         static let absoluteChange: CGFloat = 70
         static let percentageChange: CGFloat = 60
     }
@@ -96,10 +96,15 @@ struct QuoteRailView: View {
             Text(verbatim: quote.displayName)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(verbatim: Self.priceString(quote.price))
-                .monospacedDigit()
-                .frame(width: Column.price, alignment: .trailing)
-            Text(verbatim: "\(direction) \(absoluteChange)")
+            HStack(spacing: 3) {
+                Text(verbatim: Self.priceString(quote.price))
+                    .monospacedDigit()
+                Text(verbatim: direction)
+                    .foregroundStyle(changeColor(for: quote.change))
+                    .frame(width: 8, alignment: .trailing)
+            }
+            .frame(width: Column.priceWithDirection, alignment: .trailing)
+            Text(verbatim: absoluteChange)
                 .monospacedDigit()
                 .foregroundStyle(changeColor(for: quote.change))
                 .frame(width: Column.absoluteChange, alignment: .trailing)
