@@ -4,6 +4,7 @@ import QuickCalKit
 struct CalendarGridView: View {
     let month: CalendarMonth
     let showWeekNumbers: Bool
+    let sprintSchedule: SprintSchedule?
     let today: Date
     let selectedDates: Set<CalendarDate>
     let workdayStatus: (Date) -> WorkdayStatus
@@ -42,6 +43,19 @@ struct CalendarGridView: View {
                         )
                         .frame(width: 28)
                 }
+                if sprintSchedule != nil {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(
+                            themeStyle.secondaryText.opacity(
+                                themeStyle.weekNumberOpacity
+                            )
+                        )
+                        .frame(width: 32)
+                        .accessibilityLabel(
+                            Text(verbatim: localization.string(.sprintColumn))
+                        )
+                }
             }
             .padding(.bottom, themeStyle.usesWeekRules ? 3 : 0)
             .overlay(alignment: .bottom) {
@@ -63,6 +77,10 @@ struct CalendarGridView: View {
                         timeZone: month.calendar.timeZone
                     )
                 }
+                let sprintNumbers = sprintSchedule?.sprintNumbers(
+                    for: week.days.map(\.date)
+                ) ?? []
+                let currentSprint = sprintSchedule?.sprint(for: today)
 
                 HStack(spacing: 4) {
                     ForEach(
@@ -89,6 +107,10 @@ struct CalendarGridView: View {
                                 day,
                                 relativeTo: today
                             ),
+                            isInCurrentSprint: currentSprint.map {
+                                $0.number == sprintSchedule?.sprint(for: day.date)?.number
+                            } ?? false,
+                            sprintNumber: sprintSchedule?.sprint(for: day.date)?.number,
                             workdayStatus: workdayStatus(day.date),
                             calendar: month.calendar,
                             localization: localization,
@@ -116,6 +138,29 @@ struct CalendarGridView: View {
                                 ))
                             )
                     }
+                    if sprintSchedule != nil {
+                        Text(verbatim: sprintDisplayLabel(sprintNumbers))
+                            .font(.system(
+                                size: 11,
+                                weight: .medium,
+                                design: themeStyle.dayFontDesign
+                            ))
+                            .monospacedDigit()
+                            .foregroundStyle(
+                                themeStyle.secondaryText.opacity(
+                                    themeStyle.weekNumberOpacity
+                                )
+                            )
+                            .frame(width: 32)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+                            .accessibilityLabel(
+                                Text(verbatim: sprintAccessibilityLabel(
+                                    sprintNumbers,
+                                    localization: localization
+                                ))
+                            )
+                    }
                 }
                 .overlay(alignment: .bottom) {
                     if themeStyle.usesWeekRules {
@@ -132,5 +177,23 @@ struct CalendarGridView: View {
             }
         }
         .environment(\.locale, localization.locale)
+    }
+
+    private func sprintAccessibilityLabel(
+        _ sprintNumbers: [Int],
+        localization: QuickCalLocalization
+    ) -> String {
+        if sprintNumbers.isEmpty {
+            return localization.string(.noSprint)
+        }
+        return sprintNumbers
+            .map { localization.format(.sprintNumberFormat, $0) }
+            .joined(separator: ", ")
+    }
+
+    private func sprintDisplayLabel(_ sprintNumbers: [Int]) -> String {
+        sprintNumbers.isEmpty
+            ? "—"
+            : sprintNumbers.map(String.init).joined(separator: " → ")
     }
 }

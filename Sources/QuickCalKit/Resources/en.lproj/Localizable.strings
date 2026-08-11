@@ -6,7 +6,17 @@
 "calendar.accessibility.day_off" = "Day off";
 "calendar.week_number_format" = "Week %d";
 "calendar.week_number_short" = "W";
+"calendar.sprint_column" = "Sprints";
+"calendar.sprint_number_format" = "Sprint %d";
+"calendar.accessibility.current_sprint" = "Current sprint";
+"calendar.accessibility.no_sprint" = "No sprint";
 "settings.show_week_numbers" = "Show week numbers";
+"settings.sprint_schedule" = "Sprint schedule";
+"settings.sprint_start_date" = "First sprint starts";
+"settings.sprint_first_number" = "First sprint number";
+"settings.save_sprint_schedule" = "Save sprint schedule";
+"settings.hide_sprints" = "Hide sprints";
+"settings.show_sprints" = "Show sprints";
 "settings.week_numbers_short" = "Weeks";
 "settings.launch_at_login" = "Launch at login";
 "settings.launch_at_login_short" = "Autostart";

@@ -47,6 +47,10 @@ struct QuickCalThemeStyle {
         theme.isDark ? 0.54 : 0.48
     }
 
+    var sprintHighlightColor: Color {
+        theme.isDark ? .white.opacity(0.08) : .black.opacity(0.055)
+    }
+
     var headerRuleOpacity: Double {
         theme.family == .signalGrid ? 0.42 : 1
     }

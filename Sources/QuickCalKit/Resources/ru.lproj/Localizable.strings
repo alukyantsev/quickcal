@@ -6,7 +6,17 @@
 "calendar.accessibility.day_off" = "Выходной";
 "calendar.week_number_format" = "Неделя %d";
 "calendar.week_number_short" = "Н";
+"calendar.sprint_column" = "Спринты";
+"calendar.sprint_number_format" = "Спринт %d";
+"calendar.accessibility.current_sprint" = "Текущий спринт";
+"calendar.accessibility.no_sprint" = "Нет спринта";
 "settings.show_week_numbers" = "Показывать номера недель";
+"settings.sprint_schedule" = "Расписание спринтов";
+"settings.sprint_start_date" = "Начало первого спринта";
+"settings.sprint_first_number" = "Номер первого спринта";
+"settings.save_sprint_schedule" = "Сохранить расписание спринтов";
+"settings.hide_sprints" = "Скрыть спринты";
+"settings.show_sprints" = "Показывать спринты";
 "settings.week_numbers_short" = "Недели";
 "settings.launch_at_login" = "Запускать при входе";
 "settings.launch_at_login_short" = "Автозапуск";

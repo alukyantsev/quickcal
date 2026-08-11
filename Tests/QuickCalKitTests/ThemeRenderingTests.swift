@@ -87,6 +87,8 @@ struct ThemeRenderingTests {
             calendarDate: calendarDate,
             selectionSegment: .isolated,
             isToday: false,
+            isInCurrentSprint: false,
+            sprintNumber: nil,
             workdayStatus: .nonWorking,
             calendar: calendar,
             localization: localization,

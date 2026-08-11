@@ -395,6 +395,87 @@ private struct MenuBarInformationOptionsView: View {
 }
 
 @MainActor
+private struct SprintScheduleOptionsView: View {
+    @ObservedObject var store: SprintScheduleSettingsStore
+
+    @Environment(\.quickCalThemeStyle) private var themeStyle
+    @State private var startDate = Date()
+    @State private var firstSprintNumber = 1
+
+    private let localization = QuickCalLocalization.current
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(verbatim: localization.string(.sprintSchedule))
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(themeStyle.primaryText)
+                .padding(.horizontal, 7)
+
+            if store.settings.startDate != nil {
+                Toggle(
+                    localization.string(
+                        store.settings.isVisible ? .hideSprints : .showSprints
+                    ),
+                    isOn: Binding(
+                        get: { store.settings.isVisible },
+                        set: { store.setVisibility($0) }
+                    )
+                )
+                .toggleStyle(CompactCheckboxToggleStyle())
+                .font(.system(size: 12))
+                .foregroundStyle(themeStyle.primaryText)
+                .padding(.horizontal, 7)
+            }
+
+            DatePicker(
+                localization.string(.sprintStartDate),
+                selection: $startDate,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.compact)
+            .font(.system(size: 12))
+            .padding(.horizontal, 7)
+
+            HStack(spacing: 6) {
+                Text(verbatim: localization.string(.sprintFirstNumber))
+                    .font(.system(size: 12))
+                TextField(
+                    "",
+                    value: $firstSprintNumber,
+                    format: .number
+                )
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 48)
+            }
+            .foregroundStyle(themeStyle.primaryText)
+            .padding(.horizontal, 7)
+
+            HoverTextButton(
+                title: localization.string(.saveSprintSchedule),
+                help: localization.string(.saveSprintSchedule),
+                height: 25,
+                horizontalPadding: 7
+            ) {
+                guard
+                    firstSprintNumber > 0,
+                    let calendarDate = CalendarDate(date: startDate)
+                else { return }
+                store.configure(
+                    startDate: calendarDate,
+                    firstSprintNumber: firstSprintNumber
+                )
+            }
+            .padding(.horizontal, 7)
+        }
+        .onAppear {
+            guard let savedStartDate = store.settings.startDate else { return }
+            startDate = savedStartDate.date() ?? startDate
+            firstSprintNumber = store.settings.firstSprintNumber
+        }
+    }
+}
+
+@MainActor
 struct CalendarPopoverView: View {
     @AppStorage("showWeekNumbers") private var showWeekNumbers = true
     @ObservedObject private var themeStore: QuickCalThemeStore
@@ -402,6 +483,7 @@ struct CalendarPopoverView: View {
     @StateObject private var launchAtLogin = LaunchAtLoginController()
     @StateObject private var selectedDates = SelectedDatesStore()
     @StateObject private var workCalendar = WorkCalendarController()
+    @StateObject private var sprintSettings = SprintScheduleSettingsStore()
     @State private var activePanel: QuickCalHeaderPanel?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -460,7 +542,7 @@ struct CalendarPopoverView: View {
                 calendarSurface(today: context.date)
                     .padding(themeStyle.shellPadding)
             }
-            .frame(width: showWeekNumbers ? 376 : 344)
+            .frame(width: calendarWidth)
             .clipShape(
                 RoundedRectangle(
                     cornerRadius: themeStyle.outerCornerRadius,
@@ -473,6 +555,10 @@ struct CalendarPopoverView: View {
             .animation(
                 .easeInOut(duration: reduceMotion ? 0 : 0.16),
                 value: showWeekNumbers
+            )
+            .animation(
+                .easeInOut(duration: reduceMotion ? 0 : 0.16),
+                value: sprintSettings.settings.isVisible
             )
             .animation(
                 .easeInOut(duration: reduceMotion ? 0 : 0.20),
@@ -495,6 +581,7 @@ struct CalendarPopoverView: View {
                 CalendarGridView(
                     month: month,
                     showWeekNumbers: showWeekNumbers,
+                    sprintSchedule: sprintSchedule(for: month),
                     today: today,
                     selectedDates: selectedDates.selectedDates,
                     workdayStatus: { workCalendar.status(for: $0) },
@@ -584,6 +671,23 @@ struct CalendarPopoverView: View {
         .onExitCommand {
             activePanel = nil
         }
+    }
+
+    private var calendarWidth: CGFloat {
+        let baseWidth: CGFloat = showWeekNumbers ? 376 : 344
+        return baseWidth + (sprintSettings.settings.isVisible ? 36 : 0)
+    }
+
+    private func sprintSchedule(for month: CalendarMonth) -> SprintSchedule? {
+        guard
+            sprintSettings.settings.isVisible,
+            let startDate = sprintSettings.settings.startDate
+        else { return nil }
+        return SprintSchedule(
+            startDate: startDate,
+            firstSprintNumber: sprintSettings.settings.firstSprintNumber,
+            timeZone: month.calendar.timeZone
+        )
     }
 
     private var calendarHeader: some View {
@@ -928,6 +1032,13 @@ struct CalendarPopoverView: View {
 
                 MarketQuoteOptionsView(controller: quoteController)
             }
+
+            Rectangle()
+                .fill(popupDividerColor)
+                .frame(height: 1)
+                .padding(.vertical, 2)
+
+            SprintScheduleOptionsView(store: sprintSettings)
 
             Rectangle()
                 .fill(popupDividerColor)

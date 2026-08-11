@@ -7,6 +7,8 @@ struct CalendarDayCell: View {
     let calendarDate: CalendarDate?
     let selectionSegment: SelectionSegment
     let isToday: Bool
+    let isInCurrentSprint: Bool
+    let sprintNumber: Int?
     let workdayStatus: WorkdayStatus
     let calendar: Calendar
     let localization: QuickCalLocalization
@@ -35,6 +37,15 @@ struct CalendarDayCell: View {
             }
         } label: {
             ZStack {
+                if isInCurrentSprint {
+                    RoundedRectangle(
+                        cornerRadius: themeStyle.dayCornerRadius,
+                        style: .continuous
+                    )
+                    .fill(themeStyle.sprintHighlightColor)
+                    .frame(width: indicatorSize, height: indicatorSize)
+                }
+
                 selectionBackground
 
                 if isHovered && !isSelected && !isToday {
@@ -184,8 +195,11 @@ struct CalendarDayCell: View {
         )
     }
 
-    private var accessibilityValue: String {
+    var accessibilityValue: String {
         var values: [String] = []
+        if let sprintNumber {
+            values.append(localization.format(.sprintNumberFormat, sprintNumber))
+        }
         if isToday {
             values.append(localization.string(.today))
         }
@@ -194,6 +208,9 @@ struct CalendarDayCell: View {
         }
         if isNonWorking {
             values.append(localization.string(.dayOff))
+        }
+        if isInCurrentSprint {
+            values.append(localization.string(.currentSprint))
         }
         return values.joined(separator: ", ")
     }
