@@ -130,6 +130,9 @@ public struct SprintSchedule: Sendable {
         public let number: Int
         public let startDate: CalendarDate
         public let endDate: CalendarDate
+        /// The number of calendar days actually covered by this sprint.
+        /// A pause can make it shorter than its configured length.
+        public let lengthInDays: Int
     }
 
     public let startDate: CalendarDate
@@ -209,8 +212,18 @@ public struct SprintSchedule: Sendable {
 
             if requestedDay >= currentStart, requestedDay <= end,
                let sprintStart = CalendarDate(date: currentStart, timeZone: timeZone),
-               let sprintEnd = CalendarDate(date: end, timeZone: timeZone) {
-                return Sprint(number: number, startDate: sprintStart, endDate: sprintEnd)
+               let sprintEnd = CalendarDate(date: end, timeZone: timeZone),
+               let lengthInDays = calendar.dateComponents(
+                   [.day],
+                   from: currentStart,
+                   to: end
+               ).day {
+                return Sprint(
+                    number: number,
+                    startDate: sprintStart,
+                    endDate: sprintEnd,
+                    lengthInDays: lengthInDays + 1
+                )
             }
             if requestedDay <= end { return nil }
 

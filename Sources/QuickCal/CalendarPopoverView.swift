@@ -412,11 +412,6 @@ private struct SprintScheduleOptionsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(verbatim: localization.string(.sprintSchedule))
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(themeStyle.primaryText)
-                .padding(.horizontal, 7)
-
             if store.settings.startDate != nil {
                 Toggle(
                     localization.string(.showSprints),
@@ -445,6 +440,10 @@ private struct SprintScheduleOptionsView: View {
             guard let savedStartDate = store.settings.startDate else { return }
             startDate = savedStartDate.date() ?? startDate
             firstSprintNumber = store.settings.firstSprintNumber
+            syncEditingLength()
+        }
+        .onChange(of: editingSprint) { _, _ in
+            syncEditingLength()
         }
         .confirmationDialog(
             localization.string(.sprintHistoryWarning),
@@ -598,6 +597,12 @@ private struct SprintScheduleOptionsView: View {
 
     private func requiresHistoryConfirmation(from date: CalendarDate) -> Bool {
         date <= CalendarDate(date: .now)!
+    }
+
+    private func syncEditingLength() {
+        if let editingSprint {
+            customLength = editingSprint.lengthInDays
+        }
     }
 }
 

@@ -16,6 +16,7 @@ struct CalendarGridView: View {
 
     private let cellWidth: CGFloat = 34
     private let rowSpacing: CGFloat = 3
+    // Wide enough for several sprint numbers; labels align to the leading grid rhythm.
     private let sprintColumnWidth: CGFloat = 52
 
     var body: some View {
@@ -53,7 +54,7 @@ struct CalendarGridView: View {
                                 themeStyle.weekNumberOpacity
                             )
                         )
-                        .frame(width: sprintColumnWidth)
+                        .frame(width: sprintColumnWidth, alignment: .leading)
                         .accessibilityLabel(
                             Text(verbatim: localization.string(.sprintColumn))
                         )
@@ -181,7 +182,7 @@ struct CalendarGridView: View {
         Group {
             if sprintNumbers.isEmpty {
                 Text(verbatim: "—")
-                    .frame(width: sprintColumnWidth)
+                    .frame(width: sprintColumnWidth, alignment: .leading)
                     .accessibilityLabel(Text(verbatim: localization.string(.noSprint)))
             } else {
                 HStack(spacing: 1) {
@@ -199,7 +200,7 @@ struct CalendarGridView: View {
                         .accessibilityLabel(Text(verbatim: localization.format(.sprintNumberFormat, number)))
                     }
                 }
-                .frame(width: sprintColumnWidth)
+                .frame(width: sprintColumnWidth, alignment: .leading)
                 .lineLimit(1)
                 .accessibilityLabel(Text(verbatim: sprintAccessibilityLabel(
                     sprintNumbers,

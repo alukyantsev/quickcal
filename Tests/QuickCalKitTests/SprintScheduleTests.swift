@@ -72,6 +72,7 @@ struct SprintScheduleTests {
         #expect(schedule.sprint(for: date(2026, 12, 27, calendar: calendar)) == nil)
         #expect(schedule.sprint(for: date(2027, 1, 4, calendar: calendar)) == nil)
         #expect(schedule.sprint(for: date(2027, 1, 5, calendar: calendar))?.number == 43)
+        #expect(schedule.sprint(number: 42)?.lengthInDays == 7)
         #expect(schedule.sprintNumbers(for: [
             date(2026, 12, 28, calendar: calendar),
             date(2027, 1, 5, calendar: calendar),
