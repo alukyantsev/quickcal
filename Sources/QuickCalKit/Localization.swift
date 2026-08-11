@@ -19,7 +19,6 @@ public struct QuickCalLocalization: Sendable {
         case sprintStartDate = "settings.sprint_start_date"
         case sprintFirstNumber = "settings.sprint_first_number"
         case saveSprintSchedule = "settings.save_sprint_schedule"
-        case hideSprints = "settings.hide_sprints"
         case showSprints = "settings.show_sprints"
         case editSprintLengthFormat = "settings.edit_sprint_length_format"
         case sprintLengthDays = "settings.sprint_length_days"

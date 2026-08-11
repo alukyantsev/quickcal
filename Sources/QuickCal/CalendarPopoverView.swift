@@ -420,9 +420,7 @@ private struct SprintScheduleOptionsView: View {
 
             if store.settings.startDate != nil {
                 Toggle(
-                    localization.string(
-                        store.settings.isVisible ? .hideSprints : .showSprints
-                    ),
+                    localization.string(.showSprints),
                     isOn: Binding(
                         get: { store.settings.isVisible },
                         set: { store.setVisibility($0) }
@@ -1130,70 +1128,77 @@ struct CalendarPopoverView: View {
     }
 
     private var optionsPanel: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            popupRow(
-                title: localization.string(.showWeekNumbers),
-                systemImage: showWeekNumbers
-                    ? "checkmark.square.fill"
-                    : "square"
-            ) {
-                showWeekNumbers.toggle()
-            }
+        ScrollView(.vertical) {
+            VStack(alignment: .leading, spacing: 3) {
+                popupRow(
+                    title: localization.string(.showWeekNumbers),
+                    systemImage: showWeekNumbers
+                        ? "checkmark.square.fill"
+                        : "square"
+                ) {
+                    showWeekNumbers.toggle()
+                }
 
-            if let menuBarInformationSettings {
-                MenuBarInformationOptionsView(
-                    settings: menuBarInformationSettings,
-                    textColor: popupTextColor
+                if let menuBarInformationSettings {
+                    MenuBarInformationOptionsView(
+                        settings: menuBarInformationSettings,
+                        textColor: popupTextColor
+                    )
+                }
+
+                popupRow(
+                    title: localization.string(.launchAtLogin),
+                    systemImage: launchAtLogin.isEnabled
+                        ? "checkmark.square.fill"
+                        : "square"
+                ) {
+                    launchAtLogin.setEnabled(!launchAtLogin.isEnabled)
+                }
+
+                if let weatherController {
+                    Rectangle()
+                        .fill(popupDividerColor)
+                        .frame(height: 1)
+                        .padding(.vertical, 2)
+
+                    WeatherOptionsView(controller: weatherController)
+                }
+
+                if let quoteController {
+                    Rectangle()
+                        .fill(popupDividerColor)
+                        .frame(height: 1)
+                        .padding(.vertical, 2)
+
+                    MarketQuoteOptionsView(controller: quoteController)
+                }
+
+                Rectangle()
+                    .fill(popupDividerColor)
+                    .frame(height: 1)
+                    .padding(.vertical, 2)
+
+                SprintScheduleOptionsView(
+                    store: sprintSettings,
+                    editingSprint: $editingSprint
                 )
-            }
 
-            popupRow(
-                title: localization.string(.launchAtLogin),
-                systemImage: launchAtLogin.isEnabled
-                    ? "checkmark.square.fill"
-                    : "square"
-            ) {
-                launchAtLogin.setEnabled(!launchAtLogin.isEnabled)
-            }
-
-            if let weatherController {
                 Rectangle()
                     .fill(popupDividerColor)
                     .frame(height: 1)
                     .padding(.vertical, 2)
 
-                WeatherOptionsView(controller: weatherController)
+                popupRow(
+                    title: localization.string(.quitQuickCal),
+                    systemImage: "power"
+                ) {
+                    NSApplication.shared.terminate(nil)
+                }
             }
-
-            if let quoteController {
-                Rectangle()
-                    .fill(popupDividerColor)
-                    .frame(height: 1)
-                    .padding(.vertical, 2)
-
-                MarketQuoteOptionsView(controller: quoteController)
-            }
-
-            Rectangle()
-                .fill(popupDividerColor)
-                .frame(height: 1)
-                .padding(.vertical, 2)
-
-            SprintScheduleOptionsView(store: sprintSettings, editingSprint: $editingSprint)
-
-            Rectangle()
-                .fill(popupDividerColor)
-                .frame(height: 1)
-                .padding(.vertical, 2)
-
-            popupRow(
-                title: localization.string(.quitQuickCal),
-                systemImage: "power"
-            ) {
-                NSApplication.shared.terminate(nil)
-            }
+            .padding(7)
         }
-        .padding(7)
+        .scrollIndicators(.automatic)
+        .frame(maxHeight: 440)
         .frame(width: 218)
         .background {
             RoundedRectangle(cornerRadius: 10, style: .continuous)

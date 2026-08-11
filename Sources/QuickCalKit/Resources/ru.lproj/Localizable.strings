@@ -15,7 +15,6 @@
 "settings.sprint_start_date" = "Начало первого спринта";
 "settings.sprint_first_number" = "Номер первого спринта";
 "settings.save_sprint_schedule" = "Сохранить расписание спринтов";
-"settings.hide_sprints" = "Скрыть спринты";
 "settings.show_sprints" = "Показывать спринты";
 "settings.edit_sprint_length_format" = "Длительность спринта %d";
 "settings.sprint_length_days" = "Дней";

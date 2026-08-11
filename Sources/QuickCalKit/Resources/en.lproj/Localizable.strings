@@ -15,7 +15,6 @@
 "settings.sprint_start_date" = "First sprint starts";
 "settings.sprint_first_number" = "First sprint number";
 "settings.save_sprint_schedule" = "Save sprint schedule";
-"settings.hide_sprints" = "Hide sprints";
 "settings.show_sprints" = "Show sprints";
 "settings.edit_sprint_length_format" = "Sprint %d length";
 "settings.sprint_length_days" = "Days";
