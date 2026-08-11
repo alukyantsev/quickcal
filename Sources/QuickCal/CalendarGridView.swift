@@ -10,6 +10,7 @@ struct CalendarGridView: View {
     let workdayStatus: (Date) -> WorkdayStatus
     let localization: QuickCalLocalization
     let onToggleDate: (CalendarDate) -> Void
+    let onEditSprint: (SprintSchedule.Sprint) -> Void
 
     @Environment(\.quickCalThemeStyle) private var themeStyle
 
@@ -139,27 +140,10 @@ struct CalendarGridView: View {
                             )
                     }
                     if sprintSchedule != nil {
-                        Text(verbatim: sprintDisplayLabel(sprintNumbers))
-                            .font(.system(
-                                size: 11,
-                                weight: .medium,
-                                design: themeStyle.dayFontDesign
-                            ))
-                            .monospacedDigit()
-                            .foregroundStyle(
-                                themeStyle.secondaryText.opacity(
-                                    themeStyle.weekNumberOpacity
-                                )
-                            )
-                            .frame(width: 32)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.65)
-                            .accessibilityLabel(
-                                Text(verbatim: sprintAccessibilityLabel(
-                                    sprintNumbers,
-                                    localization: localization
-                                ))
-                            )
+                        sprintWeekLabel(
+                            sprintNumbers: sprintNumbers,
+                            dates: week.days.map(\.date)
+                        )
                     }
                 }
                 .overlay(alignment: .bottom) {
@@ -191,9 +175,38 @@ struct CalendarGridView: View {
             .joined(separator: ", ")
     }
 
-    private func sprintDisplayLabel(_ sprintNumbers: [Int]) -> String {
-        sprintNumbers.isEmpty
-            ? "—"
-            : sprintNumbers.map(String.init).joined(separator: " → ")
+    @ViewBuilder
+    private func sprintWeekLabel(sprintNumbers: [Int], dates: [Date]) -> some View {
+        if sprintNumbers.isEmpty {
+            Text(verbatim: "—")
+                .frame(width: 32)
+                .accessibilityLabel(Text(verbatim: localization.string(.noSprint)))
+        } else {
+            HStack(spacing: 1) {
+                ForEach(Array(sprintNumbers.enumerated()), id: \.element) { index, number in
+                    if index > 0 { Text(verbatim: "→") }
+                    Button {
+                        if let sprint = dates.compactMap({ sprintSchedule?.sprint(for: $0) })
+                            .first(where: { $0.number == number }) {
+                            onEditSprint(sprint)
+                        }
+                    } label: {
+                        Text(number, format: .number)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text(verbatim: localization.format(.sprintNumberFormat, number)))
+                }
+            }
+            .frame(width: 32)
+            .lineLimit(1)
+            .minimumScaleFactor(0.65)
+            .accessibilityLabel(Text(verbatim: sprintAccessibilityLabel(
+                sprintNumbers,
+                localization: localization
+            )))
+        }
+        .font(.system(size: 11, weight: .medium, design: themeStyle.dayFontDesign))
+        .monospacedDigit()
+        .foregroundStyle(themeStyle.secondaryText.opacity(themeStyle.weekNumberOpacity))
     }
 }

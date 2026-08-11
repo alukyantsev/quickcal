@@ -33,7 +33,8 @@ struct SprintCalendarRenderingTests {
                 preferredLanguages: ["en"],
                 systemLocale: Locale(identifier: "en_US")
             ),
-            onToggleDate: { _ in }
+            onToggleDate: { _ in },
+            onEditSprint: { _ in }
         )
         .environment(\.quickCalThemeStyle, QuickCalThemeStyle(theme: .systemLight))
 

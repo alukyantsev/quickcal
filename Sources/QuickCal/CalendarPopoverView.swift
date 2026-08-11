@@ -397,10 +397,17 @@ private struct MenuBarInformationOptionsView: View {
 @MainActor
 private struct SprintScheduleOptionsView: View {
     @ObservedObject var store: SprintScheduleSettingsStore
+    @Binding var editingSprint: SprintSchedule.Sprint?
 
     @Environment(\.quickCalThemeStyle) private var themeStyle
     @State private var startDate = Date()
     @State private var firstSprintNumber = 1
+    @State private var customLength = 14
+    @State private var menuSprintNumber = 1
+    @State private var pauseStartDate = Date()
+    @State private var pauseEndDate = Date()
+    @State private var pendingLength: Int?
+    @State private var pendingPause: SprintPause?
 
     private let localization = QuickCalLocalization.current
 
@@ -466,12 +473,121 @@ private struct SprintScheduleOptionsView: View {
                 )
             }
             .padding(.horizontal, 7)
+
+            if store.settings.startDate != nil {
+                menuSprintEditorLauncher
+            }
+
+            if let editingSprint {
+                sprintEditor(for: editingSprint)
+            }
+
+            pauseEditor
         }
         .onAppear {
             guard let savedStartDate = store.settings.startDate else { return }
             startDate = savedStartDate.date() ?? startDate
             firstSprintNumber = store.settings.firstSprintNumber
+            menuSprintNumber = store.settings.firstSprintNumber
         }
+        .confirmationDialog(
+            localization.string(.sprintHistoryWarning),
+            isPresented: Binding(
+                get: { pendingLength != nil || pendingPause != nil },
+                set: { if !$0 { pendingLength = nil; pendingPause = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(localization.string(.sprintHistoryConfirm)) {
+                if let pendingLength, let editingSprint {
+                    _ = store.setLength(ofSprint: editingSprint.number, to: pendingLength)
+                } else if let pendingPause {
+                    _ = store.addPause(from: pendingPause.startDate, through: pendingPause.endDate)
+                }
+                self.pendingLength = nil
+                self.pendingPause = nil
+            }
+            Button(localization.string(.sprintHistoryCancel), role: .cancel) {
+                pendingLength = nil
+                self.pendingPause = nil
+            }
+        } message: {
+            Text(verbatim: localization.string(.sprintHistoryWarningMessage))
+        }
+    }
+
+    @ViewBuilder
+    private var menuSprintEditorLauncher: some View {
+        HStack(spacing: 6) {
+            Text(verbatim: localization.string(.sprintNumber))
+                .font(.system(size: 12))
+            TextField("", value: $menuSprintNumber, format: .number)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 48)
+            HoverTextButton(
+                title: localization.string(.editSprintLength),
+                help: localization.string(.editSprintLength)
+            ) {
+                editingSprint = store.settings.schedule?.sprint(number: menuSprintNumber)
+            }
+        }
+        .foregroundStyle(themeStyle.primaryText)
+        .padding(.horizontal, 7)
+    }
+
+    @ViewBuilder
+    private func sprintEditor(for sprint: SprintSchedule.Sprint) -> some View {
+        Rectangle().fill(themeStyle.dividerColor.opacity(0.5)).frame(height: 1).padding(.vertical, 2)
+        Text(verbatim: localization.format(.editSprintLengthFormat, sprint.number))
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(themeStyle.primaryText)
+            .padding(.horizontal, 7)
+        HStack(spacing: 4) {
+            ForEach([7, 14, 21], id: \.self) { length in
+                HoverTextButton(title: "\(length)", help: localization.string(.sprintLengthDays)) {
+                    requestLength(length, for: sprint)
+                }
+            }
+            TextField(localization.string(.sprintLengthDays), value: $customLength, format: .number)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 48)
+            HoverTextButton(title: localization.string(.applySprintLength), help: localization.string(.applySprintLength)) {
+                requestLength(customLength, for: sprint)
+            }
+        }
+        .padding(.horizontal, 7)
+    }
+
+    private var pauseEditor: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Rectangle().fill(themeStyle.dividerColor.opacity(0.5)).frame(height: 1).padding(.vertical, 2)
+            Text(verbatim: localization.string(.sprintPause))
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(themeStyle.primaryText)
+                .padding(.horizontal, 7)
+            DatePicker(localization.string(.sprintPauseStart), selection: $pauseStartDate, displayedComponents: .date)
+                .datePickerStyle(.compact).font(.system(size: 12)).padding(.horizontal, 7)
+            DatePicker(localization.string(.sprintPauseEnd), selection: $pauseEndDate, displayedComponents: .date)
+                .datePickerStyle(.compact).font(.system(size: 12)).padding(.horizontal, 7)
+            HoverTextButton(title: localization.string(.addSprintPause), help: localization.string(.addSprintPause)) {
+                guard let start = CalendarDate(date: pauseStartDate), let end = CalendarDate(date: pauseEndDate), start <= end else { return }
+                if requiresHistoryConfirmation(from: start) {
+                    pendingPause = .init(startDate: start, endDate: end)
+                }
+                else { _ = store.addPause(from: start, through: end) }
+            }
+            .padding(.horizontal, 7)
+        }
+    }
+
+    private func requestLength(_ length: Int, for sprint: SprintSchedule.Sprint) {
+        guard length > 0 else { return }
+        if requiresHistoryConfirmation(from: sprint.startDate) { pendingLength = length }
+        else { _ = store.setLength(ofSprint: sprint.number, to: length) }
+    }
+
+    private func requiresHistoryConfirmation(from date: CalendarDate) -> Bool {
+        date <= CalendarDate(date: .now)!
     }
 }
 
@@ -484,6 +600,7 @@ struct CalendarPopoverView: View {
     @StateObject private var selectedDates = SelectedDatesStore()
     @StateObject private var workCalendar = WorkCalendarController()
     @StateObject private var sprintSettings = SprintScheduleSettingsStore()
+    @State private var editingSprint: SprintSchedule.Sprint?
     @State private var activePanel: QuickCalHeaderPanel?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -586,7 +703,11 @@ struct CalendarPopoverView: View {
                     selectedDates: selectedDates.selectedDates,
                     workdayStatus: { workCalendar.status(for: $0) },
                     localization: localization,
-                    onToggleDate: { selectedDates.toggle($0) }
+                    onToggleDate: { selectedDates.toggle($0) },
+                    onEditSprint: { sprint in
+                        editingSprint = sprint
+                        activePanel = .options
+                    }
                 )
                 .task(id: month.start) {
                     await workCalendar.load(month: month)
@@ -686,6 +807,9 @@ struct CalendarPopoverView: View {
         return SprintSchedule(
             startDate: startDate,
             firstSprintNumber: sprintSettings.settings.firstSprintNumber,
+            defaultLengthInDays: sprintSettings.settings.defaultLengthInDays,
+            lengthOverrides: sprintSettings.settings.lengthOverrides,
+            pauses: sprintSettings.settings.pauses,
             timeZone: month.calendar.timeZone
         )
     }
@@ -1038,7 +1162,7 @@ struct CalendarPopoverView: View {
                 .frame(height: 1)
                 .padding(.vertical, 2)
 
-            SprintScheduleOptionsView(store: sprintSettings)
+            SprintScheduleOptionsView(store: sprintSettings, editingSprint: $editingSprint)
 
             Rectangle()
                 .fill(popupDividerColor)
