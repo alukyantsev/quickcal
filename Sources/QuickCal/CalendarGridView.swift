@@ -177,33 +177,35 @@ struct CalendarGridView: View {
 
     @ViewBuilder
     private func sprintWeekLabel(sprintNumbers: [Int], dates: [Date]) -> some View {
-        if sprintNumbers.isEmpty {
-            Text(verbatim: "—")
-                .frame(width: 32)
-                .accessibilityLabel(Text(verbatim: localization.string(.noSprint)))
-        } else {
-            HStack(spacing: 1) {
-                ForEach(Array(sprintNumbers.enumerated()), id: \.element) { index, number in
-                    if index > 0 { Text(verbatim: "→") }
-                    Button {
-                        if let sprint = dates.compactMap({ sprintSchedule?.sprint(for: $0) })
-                            .first(where: { $0.number == number }) {
-                            onEditSprint(sprint)
+        Group {
+            if sprintNumbers.isEmpty {
+                Text(verbatim: "—")
+                    .frame(width: 32)
+                    .accessibilityLabel(Text(verbatim: localization.string(.noSprint)))
+            } else {
+                HStack(spacing: 1) {
+                    ForEach(Array(sprintNumbers.enumerated()), id: \.element) { index, number in
+                        if index > 0 { Text(verbatim: "→") }
+                        Button {
+                            if let sprint = dates.compactMap({ sprintSchedule?.sprint(for: $0) })
+                                .first(where: { $0.number == number }) {
+                                onEditSprint(sprint)
+                            }
+                        } label: {
+                            Text(number, format: .number)
                         }
-                    } label: {
-                        Text(number, format: .number)
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text(verbatim: localization.format(.sprintNumberFormat, number)))
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text(verbatim: localization.format(.sprintNumberFormat, number)))
                 }
+                .frame(width: 32)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .accessibilityLabel(Text(verbatim: sprintAccessibilityLabel(
+                    sprintNumbers,
+                    localization: localization
+                )))
             }
-            .frame(width: 32)
-            .lineLimit(1)
-            .minimumScaleFactor(0.65)
-            .accessibilityLabel(Text(verbatim: sprintAccessibilityLabel(
-                sprintNumbers,
-                localization: localization
-            )))
         }
         .font(.system(size: 11, weight: .medium, design: themeStyle.dayFontDesign))
         .monospacedDigit()

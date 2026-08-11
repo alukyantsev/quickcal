@@ -526,7 +526,9 @@ private struct SprintScheduleOptionsView: View {
                 .frame(width: 48)
             HoverTextButton(
                 title: localization.string(.editSprintLength),
-                help: localization.string(.editSprintLength)
+                help: localization.string(.editSprintLength),
+                height: 25,
+                horizontalPadding: 7
             ) {
                 editingSprint = store.settings.schedule?.sprint(number: menuSprintNumber)
             }
@@ -544,14 +546,24 @@ private struct SprintScheduleOptionsView: View {
             .padding(.horizontal, 7)
         HStack(spacing: 4) {
             ForEach([7, 14, 21], id: \.self) { length in
-                HoverTextButton(title: "\(length)", help: localization.string(.sprintLengthDays)) {
+                HoverTextButton(
+                    title: "\(length)",
+                    help: localization.string(.sprintLengthDays),
+                    height: 25,
+                    horizontalPadding: 7
+                ) {
                     requestLength(length, for: sprint)
                 }
             }
             TextField(localization.string(.sprintLengthDays), value: $customLength, format: .number)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 48)
-            HoverTextButton(title: localization.string(.applySprintLength), help: localization.string(.applySprintLength)) {
+            HoverTextButton(
+                title: localization.string(.applySprintLength),
+                help: localization.string(.applySprintLength),
+                height: 25,
+                horizontalPadding: 7
+            ) {
                 requestLength(customLength, for: sprint)
             }
         }
@@ -569,7 +581,12 @@ private struct SprintScheduleOptionsView: View {
                 .datePickerStyle(.compact).font(.system(size: 12)).padding(.horizontal, 7)
             DatePicker(localization.string(.sprintPauseEnd), selection: $pauseEndDate, displayedComponents: .date)
                 .datePickerStyle(.compact).font(.system(size: 12)).padding(.horizontal, 7)
-            HoverTextButton(title: localization.string(.addSprintPause), help: localization.string(.addSprintPause)) {
+            HoverTextButton(
+                title: localization.string(.addSprintPause),
+                help: localization.string(.addSprintPause),
+                height: 25,
+                horizontalPadding: 7
+            ) {
                 guard let start = CalendarDate(date: pauseStartDate), let end = CalendarDate(date: pauseEndDate), start <= end else { return }
                 if requiresHistoryConfirmation(from: start) {
                     pendingPause = .init(startDate: start, endDate: end)
