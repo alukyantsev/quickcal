@@ -190,7 +190,7 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
                 to: popover
             )
             popover.show(
-                relativeTo: MenuBarPopoverLayout.positioningRect(
+                relativeTo: MenuBarStatusItemRenderer.popoverPositioningRect(
                     in: button.bounds
                 ),
                 of: button,

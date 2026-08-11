@@ -217,7 +217,7 @@ struct MenuBarStatusItemRendererTests {
     }
 
     @Test
-    func detailedAndFallbackRenderingKeepOneVariableWidthPopoverAction() {
+    func detailedAndFallbackRenderingKeepOneFixedWidthPopoverAction() {
         let button = NSStatusBarButton(frame: NSRect(
             x: 0,
             y: 0,
@@ -235,7 +235,7 @@ struct MenuBarStatusItemRendererTests {
         )
 
         let detailedWidth = button.fittingSize.width
-        #expect(MenuBarStatusItemRenderer.preferredLength == NSStatusItem.variableLength)
+        #expect(MenuBarStatusItemRenderer.preferredLength > 0)
         #expect(button.imagePosition == .imageLeading)
         #expect(button.image?.isTemplate == true)
         #expect(button.attributedTitle.string == "+18° · \u{FFFC}\u{00A0}2740")
@@ -252,23 +252,20 @@ struct MenuBarStatusItemRendererTests {
         #expect(button.imagePosition == .imageOnly)
         #expect(button.image?.isTemplate == true)
         #expect(button.attributedTitle.string.isEmpty)
-        #expect(detailedWidth > button.fittingSize.width)
+        #expect(
+            MenuBarStatusItemRenderer.preferredLength >= detailedWidth
+        )
         #expect(button.target === target)
         #expect(button.action == action)
         #expect(button.accessibilityLabel() == "QuickCal")
     }
 
     @Test
-    func popoverAnchorsToTheStableTrailingEdgeWithoutResizingTheStatusItem() {
-        let compactBounds = NSRect(x: 0, y: 0, width: 24, height: 22)
-        let detailedBounds = NSRect(x: 0, y: 0, width: 134, height: 22)
+    func popoverUsesTheButtonBoundsBecauseItsWidthDoesNotChange() {
+        let bounds = NSRect(x: 0, y: 0, width: 152, height: 22)
         #expect(
-            MenuBarPopoverLayout.positioningRect(in: compactBounds).maxX
-                == compactBounds.maxX
-        )
-        #expect(
-            MenuBarPopoverLayout.positioningRect(in: detailedBounds).maxX
-                == detailedBounds.maxX
+            MenuBarStatusItemRenderer.popoverPositioningRect(in: bounds)
+                == bounds
         )
     }
 
