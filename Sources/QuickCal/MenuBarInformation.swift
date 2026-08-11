@@ -355,3 +355,17 @@ enum MenuBarStatusItemRenderer {
         return image
     }
 }
+
+@MainActor
+enum MenuBarPopoverLayout {
+    // The popover is anchored to this item. Reserving its widest practical
+    // width while the popover is open prevents an option toggle from moving
+    // the anchor as the title changes between compact and detailed modes.
+    static let openPopoverStatusItemLength: CGFloat = 168
+
+    static func statusItemLength(popoverIsShown: Bool) -> CGFloat {
+        popoverIsShown
+            ? openPopoverStatusItemLength
+            : NSStatusItem.variableLength
+    }
+}

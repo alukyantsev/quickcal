@@ -344,30 +344,6 @@ private struct MarketQuoteOptionsView: View {
 }
 
 @MainActor
-private struct MenuBarInformationOptionsView: View {
-    @ObservedObject var settings: MenuBarInformationSettingsStore
-
-    @Environment(\.quickCalThemeStyle) private var themeStyle
-
-    private let localization = QuickCalLocalization.current
-
-    var body: some View {
-        Toggle(
-            localization.string(.menuBarInformation),
-            isOn: Binding(
-                get: { settings.isEnabled },
-                set: { settings.setEnabled($0) }
-            )
-        )
-        .toggleStyle(CompactCheckboxToggleStyle())
-        .font(.system(size: 13))
-        .foregroundStyle(themeStyle.primaryText)
-        .padding(.horizontal, 7)
-        .frame(height: 29)
-    }
-}
-
-@MainActor
 struct CalendarPopoverView: View {
     @AppStorage("showWeekNumbers") private var showWeekNumbers = true
     @ObservedObject private var themeStore: QuickCalThemeStore
@@ -869,9 +845,16 @@ struct CalendarPopoverView: View {
             }
 
             if let menuBarInformationSettings {
-                MenuBarInformationOptionsView(
-                    settings: menuBarInformationSettings
-                )
+                popupRow(
+                    title: localization.string(.menuBarInformation),
+                    systemImage: menuBarInformationSettings.isEnabled
+                        ? "checkmark.square.fill"
+                        : "square"
+                ) {
+                    menuBarInformationSettings.setEnabled(
+                        !menuBarInformationSettings.isEnabled
+                    )
+                }
             }
 
             popupRow(

@@ -43,7 +43,7 @@ enum PopoverAppearanceSynchronizer {
 }
 
 @MainActor
-final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
+final class QuickCalAppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
     private let themeStore = QuickCalThemeStore()
@@ -102,6 +102,7 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
 
         popover.behavior = .transient
         popover.animates = true
+        popover.delegate = self
         popover.contentViewController = contentController
         statusItem = item
         observeMenuBarPresentation()
@@ -117,6 +118,12 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
     ) {
         menuBarCancellables.removeAll()
         refreshCoordinator.stop()
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        statusItem?.length = MenuBarPopoverLayout.statusItemLength(
+            popoverIsShown: false
+        )
     }
 
     private var currentMenuBarPresentation: MenuBarInformationPresentation {
@@ -178,6 +185,9 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(button)
         } else {
+            statusItem?.length = MenuBarPopoverLayout.statusItemLength(
+                popoverIsShown: true
+            )
             let application = NSApplication.shared
             let systemAppearance = application.effectiveAppearance
             let theme = themeStore.resolvedTheme(

@@ -259,6 +259,34 @@ struct MenuBarStatusItemRendererTests {
     }
 
     @Test
+    func popoverKeepsTheStatusItemWidthStableWhileInformationChanges() {
+        #expect(
+            MenuBarPopoverLayout.statusItemLength(popoverIsShown: false)
+                == NSStatusItem.variableLength
+        )
+        #expect(
+            MenuBarPopoverLayout.statusItemLength(popoverIsShown: true)
+                == MenuBarPopoverLayout.openPopoverStatusItemLength
+        )
+        #expect(MenuBarPopoverLayout.openPopoverStatusItemLength > 0)
+
+        let button = NSStatusBarButton(frame: NSRect(
+            x: 0,
+            y: 0,
+            width: 24,
+            height: NSStatusBar.system.thickness
+        ))
+        MenuBarStatusItemRenderer.apply(
+            presentation: detailedPresentation,
+            to: button
+        )
+        #expect(
+            MenuBarPopoverLayout.openPopoverStatusItemLength
+                >= button.fittingSize.width
+        )
+    }
+
+    @Test
     func freshAndStaleGroupsUsePrimaryAndSecondarySystemColors() throws {
         let button = NSStatusBarButton(frame: NSRect(
             x: 0,
