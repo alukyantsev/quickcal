@@ -43,7 +43,7 @@ enum PopoverAppearanceSynchronizer {
 }
 
 @MainActor
-final class QuickCalAppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
+final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
     private let themeStore = QuickCalThemeStore()
@@ -102,7 +102,6 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate, NSPopoverDeleg
 
         popover.behavior = .transient
         popover.animates = true
-        popover.delegate = self
         popover.contentViewController = contentController
         statusItem = item
         observeMenuBarPresentation()
@@ -118,12 +117,6 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate, NSPopoverDeleg
     ) {
         menuBarCancellables.removeAll()
         refreshCoordinator.stop()
-    }
-
-    func popoverDidClose(_ notification: Notification) {
-        statusItem?.length = MenuBarPopoverLayout.statusItemLength(
-            popoverIsShown: false
-        )
     }
 
     private var currentMenuBarPresentation: MenuBarInformationPresentation {
@@ -185,9 +178,6 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate, NSPopoverDeleg
         if popover.isShown {
             popover.performClose(button)
         } else {
-            statusItem?.length = MenuBarPopoverLayout.statusItemLength(
-                popoverIsShown: true
-            )
             let application = NSApplication.shared
             let systemAppearance = application.effectiveAppearance
             let theme = themeStore.resolvedTheme(
@@ -200,7 +190,9 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate, NSPopoverDeleg
                 to: popover
             )
             popover.show(
-                relativeTo: button.bounds,
+                relativeTo: MenuBarPopoverLayout.positioningRect(
+                    in: button.bounds
+                ),
                 of: button,
                 preferredEdge: .minY
             )

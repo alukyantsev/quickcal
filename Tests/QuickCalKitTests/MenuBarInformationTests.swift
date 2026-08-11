@@ -238,7 +238,7 @@ struct MenuBarStatusItemRendererTests {
         #expect(MenuBarStatusItemRenderer.preferredLength == NSStatusItem.variableLength)
         #expect(button.imagePosition == .imageLeading)
         #expect(button.image?.isTemplate == true)
-        #expect(button.attributedTitle.string == "+18° · \u{FFFC}2740")
+        #expect(button.attributedTitle.string == "+18° · \u{FFFC}\u{00A0}2740")
         #expect(button.target === target)
         #expect(button.action == action)
         #expect(button.accessibilityLabel() == detailedPresentation.accessibilityLabel)
@@ -259,30 +259,16 @@ struct MenuBarStatusItemRendererTests {
     }
 
     @Test
-    func popoverKeepsTheStatusItemWidthStableWhileInformationChanges() {
+    func popoverAnchorsToTheStableTrailingEdgeWithoutResizingTheStatusItem() {
+        let compactBounds = NSRect(x: 0, y: 0, width: 24, height: 22)
+        let detailedBounds = NSRect(x: 0, y: 0, width: 134, height: 22)
         #expect(
-            MenuBarPopoverLayout.statusItemLength(popoverIsShown: false)
-                == NSStatusItem.variableLength
+            MenuBarPopoverLayout.positioningRect(in: compactBounds).maxX
+                == compactBounds.maxX
         )
         #expect(
-            MenuBarPopoverLayout.statusItemLength(popoverIsShown: true)
-                == MenuBarPopoverLayout.openPopoverStatusItemLength
-        )
-        #expect(MenuBarPopoverLayout.openPopoverStatusItemLength > 0)
-
-        let button = NSStatusBarButton(frame: NSRect(
-            x: 0,
-            y: 0,
-            width: 24,
-            height: NSStatusBar.system.thickness
-        ))
-        MenuBarStatusItemRenderer.apply(
-            presentation: detailedPresentation,
-            to: button
-        )
-        #expect(
-            MenuBarPopoverLayout.openPopoverStatusItemLength
-                >= button.fittingSize.width
+            MenuBarPopoverLayout.positioningRect(in: detailedBounds).maxX
+                == detailedBounds.maxX
         )
     }
 
@@ -360,8 +346,14 @@ struct MenuBarStatusItemRendererTests {
         )
 
         #expect(button.contentTintColor == nil)
-        #expect(button.attributedTitle.string == "+18° · \u{FFFC}2740")
+        #expect(button.attributedTitle.string == "+18° · \u{FFFC}\u{00A0}2740")
         #expect(button.image?.isTemplate == true)
+        let attachment = button.attributedTitle.attribute(
+            .attachment,
+            at: "+18° · ".utf16.count,
+            effectiveRange: nil
+        ) as? NSTextAttachment
+        #expect(attachment?.bounds.size == NSSize(width: 14, height: 14))
     }
 
     private var detailedPresentation: MenuBarInformationPresentation {

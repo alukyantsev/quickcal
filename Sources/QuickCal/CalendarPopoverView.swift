@@ -344,6 +344,57 @@ private struct MarketQuoteOptionsView: View {
 }
 
 @MainActor
+private struct PopupMenuRow: View {
+    let title: String
+    let systemImage: String
+    let textColor: Color
+    let action: () -> Void
+
+    var body: some View {
+        HoverSurface(horizontalPadding: 0, verticalPadding: 0) {
+            Button(action: action) {
+                HStack(spacing: 8) {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 13, weight: .medium))
+                        .frame(width: 17)
+
+                    Text(verbatim: title)
+                        .font(.system(size: 13))
+                        .lineLimit(1)
+
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(textColor)
+                .padding(.horizontal, 7)
+                .frame(height: 29)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+@MainActor
+private struct MenuBarInformationOptionsView: View {
+    @ObservedObject var settings: MenuBarInformationSettingsStore
+
+    let textColor: Color
+    private let localization = QuickCalLocalization.current
+
+    var body: some View {
+        PopupMenuRow(
+            title: localization.string(.menuBarInformation),
+            systemImage: settings.isEnabled
+                ? "checkmark.square.fill"
+                : "square",
+            textColor: textColor
+        ) {
+            settings.setEnabled(!settings.isEnabled)
+        }
+    }
+}
+
+@MainActor
 struct CalendarPopoverView: View {
     @AppStorage("showWeekNumbers") private var showWeekNumbers = true
     @ObservedObject private var themeStore: QuickCalThemeStore
@@ -845,16 +896,10 @@ struct CalendarPopoverView: View {
             }
 
             if let menuBarInformationSettings {
-                popupRow(
-                    title: localization.string(.menuBarInformation),
-                    systemImage: menuBarInformationSettings.isEnabled
-                        ? "checkmark.square.fill"
-                        : "square"
-                ) {
-                    menuBarInformationSettings.setEnabled(
-                        !menuBarInformationSettings.isEnabled
-                    )
-                }
+                MenuBarInformationOptionsView(
+                    settings: menuBarInformationSettings,
+                    textColor: popupTextColor
+                )
             }
 
             popupRow(
@@ -919,26 +964,12 @@ struct CalendarPopoverView: View {
         systemImage: String,
         action: @escaping () -> Void
     ) -> some View {
-        HoverSurface(horizontalPadding: 0, verticalPadding: 0) {
-            Button(action: action) {
-                HStack(spacing: 8) {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 13, weight: .medium))
-                        .frame(width: 17)
-
-                    Text(verbatim: title)
-                        .font(.system(size: 13))
-                        .lineLimit(1)
-
-                    Spacer(minLength: 0)
-                }
-                .foregroundStyle(popupTextColor)
-                .padding(.horizontal, 7)
-                .frame(height: 29)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
+        PopupMenuRow(
+            title: title,
+            systemImage: systemImage,
+            textColor: popupTextColor,
+            action: action
+        )
     }
 
     private func themeChoiceButton(

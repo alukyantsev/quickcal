@@ -305,6 +305,7 @@ enum MenuBarStatusItemRenderer {
             result.append(symbolAttachment(
                 named: MenuBarInformationPresentation.Quote.systemImage
             ))
+            result.append(fragment("\u{00A0}", color: nil))
             result.append(fragment(
                 quote.text,
                 color: quote.isStale ? .secondaryLabelColor : nil
@@ -334,18 +335,23 @@ enum MenuBarStatusItemRenderer {
 
     private static func symbolAttachment(named name: String) -> NSAttributedString {
         let attachment = NSTextAttachment()
-        attachment.image = symbolImage(named: name, pointSize: 12)
-        attachment.bounds = NSRect(x: 0, y: -2, width: 12, height: 12)
+        attachment.image = symbolImage(
+            named: name,
+            pointSize: 14,
+            weight: .semibold
+        )
+        attachment.bounds = NSRect(x: 0, y: -2, width: 14, height: 14)
         return NSAttributedString(attachment: attachment)
     }
 
     private static func symbolImage(
         named name: String,
-        pointSize: CGFloat
+        pointSize: CGFloat,
+        weight: NSFont.Weight = .medium
     ) -> NSImage? {
         let configuration = NSImage.SymbolConfiguration(
             pointSize: pointSize,
-            weight: .medium
+            weight: weight
         )
         let image = NSImage(
             systemSymbolName: name,
@@ -358,14 +364,17 @@ enum MenuBarStatusItemRenderer {
 
 @MainActor
 enum MenuBarPopoverLayout {
-    // The popover is anchored to this item. Reserving its widest practical
-    // width while the popover is open prevents an option toggle from moving
-    // the anchor as the title changes between compact and detailed modes.
-    static let openPopoverStatusItemLength: CGFloat = 168
+    // The status item must retain its native width so opening the popover
+    // cannot resize its icon. This virtual rect keeps the popover anchored to
+    // the item's stable trailing edge as the detailed title comes and goes.
+    static let anchorWidth: CGFloat = 168
 
-    static func statusItemLength(popoverIsShown: Bool) -> CGFloat {
-        popoverIsShown
-            ? openPopoverStatusItemLength
-            : NSStatusItem.variableLength
+    static func positioningRect(in bounds: NSRect) -> NSRect {
+        NSRect(
+            x: bounds.maxX - anchorWidth,
+            y: bounds.minY,
+            width: anchorWidth,
+            height: bounds.height
+        )
     }
 }
