@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+  <title id="title">QuickCal — menu bar: weather and MOEX index explorations</title>
+  <desc id="desc">Six precise macOS menu bar layouts, shown in dark and light appearances. Each includes temperature in Celsius and the IMOEX value.</desc>
+  <defs>
+    <style>
+      .title{font:650 38px -apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;letter-spacing:-1.4px;fill:#171a20}
+      .intro{font:400 17px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;fill:#626b78}
+      .name{font:650 17px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;letter-spacing:-.24px;fill:#171a20}
+      .sub{font:400 14px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;fill:#66717d}
+      .barValue{font:650 19px -apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;letter-spacing:-.5px}
+      .barLabel{font:600 11px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;letter-spacing:.18px}
+      .barSmall{font:500 13px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;letter-spacing:-.08px}
+      .measure{font:600 11px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;letter-spacing:.18px;fill:#626b78}
+      .dark{fill:#f4f7ff}.darkSub{fill:#b8d3d9}.light{fill:#13252c}.lightSub{fill:#5e747b}
+      .upDark{fill:#ceff63}.upLight{fill:#2d8f88}.downDark{fill:#ff8291}.downLight{fill:#d85661}
+      .hairDark{stroke:#626b78}.hairLight{stroke:#5e747b}
+    </style>
+    <linearGradient id="page" x1="0" x2="0" y2="1"><stop stop-color="#f8fafc"/><stop offset="1" stop-color="#edf1f3"/></linearGradient>
+    <linearGradient id="darkbar" x1="0" x2="1"><stop stop-color="#102b24"/><stop offset="1" stop-color="#18365d"/></linearGradient>
+    <linearGradient id="lightbar" x1="0" x2="1"><stop stop-color="#f7fbfb"/><stop offset="1" stop-color="#e2f0f3"/></linearGradient>
+    <filter id="shadow" x="-10%" y="-30%" width="120%" height="180%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#243746" flood-opacity=".10"/></filter>
+  </defs>
+  <rect width="1600" height="1120" fill="url(#page)"/>
+  <text class="title" x="104" y="103">QuickCal в строке меню</text>
+  <text class="intro" x="104" y="137">Погода + IMOEX. Все варианты — template-иконки и нативный текст, а не растровый бейдж.</text>
+  <text class="intro" x="104" y="163">Иллюстративные значения: +18 °C · IMOEX 2 740 · +0,62%.</text>
+
+  <!-- A: quiet pair -->
+  <g transform="translate(104 230)">
+    <text class="name" x="0" y="0">01 / Quiet pair</text><text class="sub" x="0" y="25">Рекомендуемый базовый: два равноправных показателя, без лишней хромы.</text>
+    <rect x="0" y="54" width="650" height="38" rx="10" fill="url(#darkbar)" filter="url(#shadow)"/>
+    <g class="dark"><circle cx="27" cy="73" r="6.5" fill="none" stroke="#f4f7ff" stroke-width="1.7"/><path d="M27 61v-3M27 88v-3M15 73h-3M39 73h3M18.5 64.5l-2-2M35.5 81.5l2 2M35.5 64.5l2-2M18.5 81.5l-2 2" fill="none" stroke="#f4f7ff" stroke-width="1.5" stroke-linecap="round"/><text class="barValue" x="46" y="80">+18°</text><line class="hairDark" x1="104" y1="64" x2="104" y2="82"/><text class="barLabel darkSub" x="121" y="71">IMOEX</text><text class="barValue" x="121" y="84">2 740</text></g>
+    <rect x="0" y="105" width="650" height="38" rx="10" fill="url(#lightbar)" filter="url(#shadow)"/>
+    <g class="light"><circle cx="27" cy="124" r="6.5" fill="none" stroke="#13252c" stroke-width="1.7"/><path d="M27 112v-3M27 139v-3M15 124h-3M39 124h3M18.5 115.5l-2-2M35.5 132.5l2 2M35.5 115.5l2-2M18.5 132.5l-2 2" fill="none" stroke="#13252c" stroke-width="1.5" stroke-linecap="round"/><text class="barValue" x="46" y="131">+18°</text><line class="hairLight" x1="104" y1="115" x2="104" y2="133"/><text class="barLabel lightSub" x="121" y="122">IMOEX</text><text class="barValue" x="121" y="135">2 740</text></g>
+    <text class="measure" x="0" y="169">≈ 157 PT · BEST FOR DAILY USE</text>
+  </g>
+
+  <!-- B: market pulse -->
+  <g transform="translate(846 230)">
+    <text class="name" x="0" y="0">02 / Market pulse</text><text class="sub" x="0" y="25">Рыночное изменение — отдельный, но не доминирующий сигнал.</text>
+    <rect x="0" y="54" width="650" height="38" rx="10" fill="url(#darkbar)" filter="url(#shadow)"/>
+    <g class="dark"><path d="M20 76c3-9 14-9 17 0-3 7-14 7-17 0Z" fill="none" stroke="#f4f7ff" stroke-width="1.6"/><path d="M28 62v-2M28 86v2" stroke="#f4f7ff" stroke-width="1.4" stroke-linecap="round"/><text class="barValue" x="47" y="80">+18°</text><line class="hairDark" x1="106" y1="64" x2="106" y2="82"/><text class="barLabel darkSub" x="123" y="71">IMOEX</text><text class="barValue" x="123" y="84">2 740</text><path d="M188 78l5-6 5 6M193 72v12" fill="none" stroke="#ceff63" stroke-width="1.7" stroke-linecap="round"/><text class="barSmall upDark" x="205" y="80">+0,62%</text></g>
+    <rect x="0" y="105" width="650" height="38" rx="10" fill="url(#lightbar)" filter="url(#shadow)"/>
+    <g class="light"><path d="M20 127c3-9 14-9 17 0-3 7-14 7-17 0Z" fill="none" stroke="#13252c" stroke-width="1.6"/><path d="M28 113v-2M28 137v2" stroke="#13252c" stroke-width="1.4" stroke-linecap="round"/><text class="barValue" x="47" y="131">+18°</text><line class="hairLight" x1="106" y1="115" x2="106" y2="133"/><text class="barLabel lightSub" x="123" y="122">IMOEX</text><text class="barValue" x="123" y="135">2 740</text><path d="M188 129l5-6 5 6M193 123v12" fill="none" stroke="#2d8f88" stroke-width="1.7" stroke-linecap="round"/><text class="barSmall upLight" x="205" y="131">+0,62%</text></g>
+    <text class="measure" x="0" y="169">≈ 223 PT · FOR ACTIVE MARKET HOURS</text>
+  </g>
+
+  <!-- C: compact ticker -->
+  <g transform="translate(104 492)">
+    <text class="name" x="0" y="0">03 / Compact ticker</text><text class="sub" x="0" y="25">Максимум информации в минимальной ширине, для плотной строки меню.</text>
+    <rect x="0" y="54" width="650" height="38" rx="10" fill="url(#darkbar)" filter="url(#shadow)"/>
+    <g class="dark"><path d="M25 62a8.5 8.5 0 1 0 7 14.5A8 8 0 1 1 25 62Z" fill="none" stroke="#f4f7ff" stroke-width="1.7"/><text class="barValue" x="45" y="80">+18°</text><text class="barSmall darkSub" x="98" y="80">·</text><text class="barLabel darkSub" x="112" y="80">IMOEX</text><text class="barValue" x="155" y="80">2740</text></g>
+    <rect x="0" y="105" width="650" height="38" rx="10" fill="url(#lightbar)" filter="url(#shadow)"/>
+    <g class="light"><path d="M25 113a8.5 8.5 0 1 0 7 14.5A8 8 0 1 1 25 113Z" fill="none" stroke="#13252c" stroke-width="1.7"/><text class="barValue" x="45" y="131">+18°</text><text class="barSmall lightSub" x="98" y="131">·</text><text class="barLabel lightSub" x="112" y="131">IMOEX</text><text class="barValue" x="155" y="131">2740</text></g>
+    <text class="measure" x="0" y="169">≈ 145 PT · NARROW MENUS</text>
+  </g>
+
+  <!-- D: data split -->
+  <g transform="translate(846 492)">
+    <text class="name" x="0" y="0">04 / Data split</text><text class="sub" x="0" y="25">Погода остаётся живой пиктограммой, рынок — строгим числовым блоком.</text>
+    <rect x="0" y="54" width="650" height="38" rx="10" fill="url(#darkbar)" filter="url(#shadow)"/>
+    <g class="dark"><circle cx="27" cy="73" r="7" fill="none" stroke="#f4f7ff" stroke-width="1.7"/><path d="M27 60v-3M27 89v-3M14 73h-3M40 73h3" stroke="#f4f7ff" stroke-width="1.5" stroke-linecap="round"/><text class="barValue" x="46" y="80">+18°</text><rect x="114" y="61" width="1" height="24" fill="#626b78"/><text class="barLabel darkSub" x="134" y="71">MOEX INDEX</text><text class="barValue" x="134" y="84">2 740</text></g>
+    <rect x="0" y="105" width="650" height="38" rx="10" fill="url(#lightbar)" filter="url(#shadow)"/>
+    <g class="light"><circle cx="27" cy="124" r="7" fill="none" stroke="#13252c" stroke-width="1.7"/><path d="M27 111v-3M27 140v-3M14 124h-3M40 124h3" stroke="#13252c" stroke-width="1.5" stroke-linecap="round"/><text class="barValue" x="46" y="131">+18°</text><rect x="114" y="112" width="1" height="24" fill="#5e747b"/><text class="barLabel lightSub" x="134" y="122">MOEX INDEX</text><text class="barValue" x="134" y="135">2 740</text></g>
+    <text class="measure" x="0" y="169">≈ 180 PT · HIGH NUMERIC CLARITY</text>
+  </g>
+
+  <!-- E: calendar anchor -->
+  <g transform="translate(104 754)">
+    <text class="name" x="0" y="0">05 / Calendar anchor</text><text class="sub" x="0" y="25">Узнаваемая функция QuickCal сохраняется перед данными: подходит для первого релиза.</text>
+    <rect x="0" y="54" width="650" height="38" rx="10" fill="url(#darkbar)" filter="url(#shadow)"/>
+    <g class="dark"><rect x="20" y="63" width="17" height="17" rx="2.5" fill="none" stroke="#f4f7ff" stroke-width="1.6"/><path d="M23 60v5M34 60v5M20 69h17M25 75h2M30 75h2" stroke="#f4f7ff" stroke-width="1.4" stroke-linecap="round"/><text class="barValue" x="50" y="80">+18°</text><line class="hairDark" x1="108" y1="64" x2="108" y2="82"/><text class="barLabel darkSub" x="125" y="71">IMOEX</text><text class="barValue" x="125" y="84">2 740</text></g>
+    <rect x="0" y="105" width="650" height="38" rx="10" fill="url(#lightbar)" filter="url(#shadow)"/>
+    <g class="light"><rect x="20" y="114" width="17" height="17" rx="2.5" fill="none" stroke="#13252c" stroke-width="1.6"/><path d="M23 111v5M34 111v5M20 120h17M25 126h2M30 126h2" stroke="#13252c" stroke-width="1.4" stroke-linecap="round"/><text class="barValue" x="50" y="131">+18°</text><line class="hairLight" x1="108" y1="115" x2="108" y2="133"/><text class="barLabel lightSub" x="125" y="122">IMOEX</text><text class="barValue" x="125" y="135">2 740</text></g>
+    <text class="measure" x="0" y="169">≈ 168 PT · STRONG QUICKCAL RECOGNITION</text>
+  </g>
+
+  <!-- F: instrument rail -->
+  <g transform="translate(846 754)">
+    <text class="name" x="0" y="0">06 / Instrument rail</text><text class="sub" x="0" y="25">Более характерный вариант для Signal Grid / Titanium Chrono, с цифрами в измерительном ритме.</text>
+    <rect x="0" y="54" width="650" height="38" rx="7" fill="#102b24" filter="url(#shadow)"/>
+    <g><path d="M25 62a9 9 0 1 0 7 14.7A8.4 8.4 0 1 1 25 62Z" fill="none" stroke="#f0f7f2" stroke-width="1.6"/><text x="46" y="80" fill="#f0f7f2" style="font:650 18px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-.8px">+18°</text><path d="M111 61v24M118 61v24" stroke="#396657"/><text x="133" y="71" fill="#b6cabc" style="font:600 10px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.7px">IMOEX</text><text x="133" y="84" fill="#f0f7f2" style="font:650 18px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-.8px">2740</text><path d="M191 79h20" stroke="#ceff63" stroke-width="1.5"/><path d="M207 75l4 4-4 4" fill="none" stroke="#ceff63" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <rect x="0" y="105" width="650" height="38" rx="7" fill="#f1f1ec" filter="url(#shadow)"/>
+    <g><path d="M25 113a9 9 0 1 0 7 14.7A8.4 8.4 0 1 1 25 113Z" fill="none" stroke="#202522" stroke-width="1.6"/><text x="46" y="131" fill="#202522" style="font:650 18px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-.8px">+18°</text><path d="M111 112v24M118 112v24" stroke="#bfc4be"/><text x="133" y="122" fill="#656d68" style="font:600 10px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.7px">IMOEX</text><text x="133" y="135" fill="#202522" style="font:650 18px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-.8px">2740</text><path d="M191 130h20" stroke="#2d8f88" stroke-width="1.5"/><path d="M207 126l4 4-4 4" fill="none" stroke="#2d8f88" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <text class="measure" x="0" y="169">≈ 190 PT · THEME-SPECIFIC OPTION</text>
+  </g>
+
+  <line x1="104" y1="1007" x2="1496" y2="1007" stroke="#d6dee2"/>
+  <text class="name" x="104" y="1052">Решение</text>
+  <text class="intro" x="198" y="1052">Запустить 01 / Quiet pair как default, 03 / Compact ticker как настройку ширины, 02 / Market pulse как настройку «показывать изменение».</text>
+  <text class="intro" x="104" y="1081">При stale / unavailable: не выдумывать значение; приглушить соответствующую группу и дать точное состояние в accessibility label и tooltip.</text>
+</svg>
