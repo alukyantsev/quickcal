@@ -344,6 +344,30 @@ private struct MarketQuoteOptionsView: View {
 }
 
 @MainActor
+private struct MenuBarInformationOptionsView: View {
+    @ObservedObject var settings: MenuBarInformationSettingsStore
+
+    @Environment(\.quickCalThemeStyle) private var themeStyle
+
+    private let localization = QuickCalLocalization.current
+
+    var body: some View {
+        Toggle(
+            localization.string(.menuBarInformation),
+            isOn: Binding(
+                get: { settings.isEnabled },
+                set: { settings.setEnabled($0) }
+            )
+        )
+        .toggleStyle(CompactCheckboxToggleStyle())
+        .font(.system(size: 13))
+        .foregroundStyle(themeStyle.primaryText)
+        .padding(.horizontal, 7)
+        .frame(height: 29)
+    }
+}
+
+@MainActor
 struct CalendarPopoverView: View {
     @AppStorage("showWeekNumbers") private var showWeekNumbers = true
     @ObservedObject private var themeStore: QuickCalThemeStore
@@ -360,6 +384,7 @@ struct CalendarPopoverView: View {
     private let onThemeChanged: (QuickCalTheme) -> Void
     private let weatherController: WeatherController?
     private let quoteController: QuoteController?
+    private let menuBarInformationSettings: MenuBarInformationSettingsStore?
     private let refreshCoordinator: ForegroundRefreshCoordinator?
     private let onRefresh: (() -> Void)?
     private let usesWeatherWheelPager: Bool
@@ -368,6 +393,7 @@ struct CalendarPopoverView: View {
         themeStore: QuickCalThemeStore,
         weatherController: WeatherController? = nil,
         quoteController: QuoteController? = nil,
+        menuBarInformationSettings: MenuBarInformationSettingsStore? = nil,
         refreshCoordinator: ForegroundRefreshCoordinator? = nil,
         onRefresh: (() -> Void)? = nil,
         initialActivePanel: QuickCalHeaderPanel? = nil,
@@ -378,6 +404,7 @@ struct CalendarPopoverView: View {
         _activePanel = State(initialValue: initialActivePanel)
         self.weatherController = weatherController
         self.quoteController = quoteController
+        self.menuBarInformationSettings = menuBarInformationSettings
         self.refreshCoordinator = refreshCoordinator
         self.onRefresh = onRefresh
         self.usesWeatherWheelPager = usesWeatherWheelPager
@@ -848,6 +875,17 @@ struct CalendarPopoverView: View {
                     : "square"
             ) {
                 launchAtLogin.setEnabled(!launchAtLogin.isEnabled)
+            }
+
+            if let menuBarInformationSettings {
+                Rectangle()
+                    .fill(popupDividerColor)
+                    .frame(height: 1)
+                    .padding(.vertical, 2)
+
+                MenuBarInformationOptionsView(
+                    settings: menuBarInformationSettings
+                )
             }
 
             if let weatherController {

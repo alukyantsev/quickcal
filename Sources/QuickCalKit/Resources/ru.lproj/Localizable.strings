@@ -10,6 +10,7 @@
 "settings.week_numbers_short" = "Недели";
 "settings.launch_at_login" = "Запускать при входе";
 "settings.launch_at_login_short" = "Автозапуск";
+"settings.menu_bar_information" = "Показывать информацию в строке меню";
 "settings.next_theme" = "Следующая тема";
 "settings.choose_theme" = "Выбрать тему";
 "settings.options_menu" = "Дополнительные настройки";
@@ -80,3 +81,8 @@
 "market.direction_up" = "рост";
 "market.direction_down" = "снижение";
 "market.direction_unchanged" = "без изменения";
+"menu_bar.accessibility_format" = "QuickCal. %@";
+"menu_bar.weather_format" = "Погода %@; актуальные данные.";
+"menu_bar.weather_stale_format" = "Погода %@; сохранённые данные от %@.";
+"menu_bar.imoex_format" = "IMOEX %@; актуальные данные.";
+"menu_bar.imoex_stale_format" = "IMOEX %@; сохранённые данные от %@.";

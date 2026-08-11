@@ -10,6 +10,7 @@
 "settings.week_numbers_short" = "Weeks";
 "settings.launch_at_login" = "Launch at login";
 "settings.launch_at_login_short" = "Autostart";
+"settings.menu_bar_information" = "Show information in menu bar";
 "settings.next_theme" = "Next theme";
 "settings.choose_theme" = "Choose theme";
 "settings.options_menu" = "More settings";
@@ -80,3 +81,8 @@
 "market.direction_up" = "up";
 "market.direction_down" = "down";
 "market.direction_unchanged" = "unchanged";
+"menu_bar.accessibility_format" = "QuickCal. %@";
+"menu_bar.weather_format" = "Weather %@; current data.";
+"menu_bar.weather_stale_format" = "Weather %@; saved data from %@.";
+"menu_bar.imoex_format" = "IMOEX %@; current data.";
+"menu_bar.imoex_stale_format" = "IMOEX %@; saved data from %@.";

@@ -14,6 +14,7 @@ public struct QuickCalLocalization: Sendable {
         case weekNumbersShort = "settings.week_numbers_short"
         case launchAtLogin = "settings.launch_at_login"
         case launchAtLoginShort = "settings.launch_at_login_short"
+        case menuBarInformation = "settings.menu_bar_information"
         case nextTheme = "settings.next_theme"
         case chooseTheme = "settings.choose_theme"
         case optionsMenu = "settings.options_menu"
@@ -84,6 +85,11 @@ public struct QuickCalLocalization: Sendable {
         case marketDirectionUp = "market.direction_up"
         case marketDirectionDown = "market.direction_down"
         case marketDirectionUnchanged = "market.direction_unchanged"
+        case menuBarAccessibilityFormat = "menu_bar.accessibility_format"
+        case menuBarWeatherFormat = "menu_bar.weather_format"
+        case menuBarWeatherStaleFormat = "menu_bar.weather_stale_format"
+        case menuBarIMOEXFormat = "menu_bar.imoex_format"
+        case menuBarIMOEXStaleFormat = "menu_bar.imoex_stale_format"
     }
 
     public static var current: QuickCalLocalization {

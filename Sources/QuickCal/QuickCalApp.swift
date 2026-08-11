@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 import QuickCalKit
 
@@ -46,6 +47,7 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
     private let themeStore = QuickCalThemeStore()
+    private let menuBarInformationSettings = MenuBarInformationSettingsStore()
     private let weatherController = WeatherController(
         provider: try! OpenMeteoWeatherClient(),
         locationService: CoreLocationWeatherService()
@@ -57,40 +59,32 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
         weatherController: weatherController,
         quoteController: quoteController
     )
+    private var menuBarCancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(
         _ notification: Notification
     ) {
         let item = NSStatusBar.system.statusItem(
-            withLength: NSStatusItem.variableLength
+            withLength: MenuBarStatusItemRenderer.preferredLength
         )
         guard let button = item.button else {
             NSApplication.shared.terminate(nil)
             return
         }
 
-        let symbolConfiguration = NSImage.SymbolConfiguration(
-            pointSize: 18,
-            weight: .medium
-        )
-        let image = NSImage(
-            systemSymbolName: "calendar.badge.clock",
-            accessibilityDescription: "QuickCal"
-        )?.withSymbolConfiguration(symbolConfiguration)
-        image?.isTemplate = true
-
-        button.image = image
-        button.imagePosition = .imageOnly
-        button.imageScaling = .scaleNone
         button.target = self
         button.action = #selector(togglePopover)
-        button.setAccessibilityLabel("QuickCal")
+        MenuBarStatusItemRenderer.apply(
+            presentation: currentMenuBarPresentation,
+            to: button
+        )
 
         let contentController = NSHostingController(
             rootView: CalendarPopoverView(
                 themeStore: themeStore,
                 weatherController: weatherController,
                 quoteController: quoteController,
+                menuBarInformationSettings: menuBarInformationSettings,
                 refreshCoordinator: refreshCoordinator,
                 onRefresh: { [weak self] in self?.refreshCoordinator.refresh() },
                 onThemeChanged: { [weak self] theme in
@@ -110,6 +104,7 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
         popover.animates = true
         popover.contentViewController = contentController
         statusItem = item
+        observeMenuBarPresentation()
 
         // Refresh starts with the menu bar app, not when the popover opens.
         // In manual mode this never asks macOS for location permission.
@@ -120,7 +115,40 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(
         _ notification: Notification
     ) {
+        menuBarCancellables.removeAll()
         refreshCoordinator.stop()
+    }
+
+    private var currentMenuBarPresentation: MenuBarInformationPresentation {
+        MenuBarInformationPresentation.make(
+            isEnabled: menuBarInformationSettings.isEnabled,
+            weatherIsVisible: weatherController.settings.isVisible,
+            weatherState: weatherController.state,
+            quoteIsVisible: quoteController.settings.isVisible,
+            quoteState: quoteController.state
+        )
+    }
+
+    private func observeMenuBarPresentation() {
+        weatherController.$state
+            .combineLatest(
+                weatherController.$settings,
+                quoteController.$state,
+                quoteController.$settings
+            )
+            .combineLatest(menuBarInformationSettings.$isEnabled)
+            .sink { [weak self] _ in
+                self?.updateMenuBarPresentation()
+            }
+            .store(in: &menuBarCancellables)
+    }
+
+    private func updateMenuBarPresentation() {
+        guard let button = statusItem?.button else { return }
+        MenuBarStatusItemRenderer.apply(
+            presentation: currentMenuBarPresentation,
+            to: button
+        )
     }
 
     @objc
