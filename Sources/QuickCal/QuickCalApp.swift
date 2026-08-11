@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import Foundation
 import SwiftUI
 import QuickCalKit
 
@@ -43,7 +44,7 @@ enum PopoverAppearanceSynchronizer {
 }
 
 @MainActor
-final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
+final class QuickCalAppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
     private let themeStore = QuickCalThemeStore()
@@ -60,6 +61,7 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
         quoteController: quoteController
     )
     private var menuBarCancellables = Set<AnyCancellable>()
+    private var popoverScreenAnchorX: CGFloat?
 
     func applicationDidFinishLaunching(
         _ notification: Notification
@@ -102,6 +104,7 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
 
         popover.behavior = .transient
         popover.animates = true
+        popover.delegate = self
         popover.contentViewController = contentController
         statusItem = item
         observeMenuBarPresentation()
@@ -117,6 +120,10 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
     ) {
         menuBarCancellables.removeAll()
         refreshCoordinator.stop()
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        popoverScreenAnchorX = nil
     }
 
     private var currentMenuBarPresentation: MenuBarInformationPresentation {
@@ -167,6 +174,10 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
             ),
             to: button
         )
+        updatePopoverAnchor()
+        DispatchQueue.main.async { [weak self] in
+            self?.updatePopoverAnchor()
+        }
     }
 
     @objc
@@ -189,9 +200,15 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
                 theme: theme,
                 to: popover
             )
+            guard let buttonScreenFrame = screenFrame(for: button) else {
+                return
+            }
+            popoverScreenAnchorX = buttonScreenFrame.midX
             popover.show(
-                relativeTo: MenuBarStatusItemRenderer.popoverPositioningRect(
-                    in: button.bounds
+                relativeTo: MenuBarPopoverAnchor.positioningRect(
+                    anchoredAt: buttonScreenFrame.midX,
+                    buttonScreenFrame: buttonScreenFrame,
+                    buttonBounds: button.bounds
                 ),
                 of: button,
                 preferredEdge: .minY
@@ -199,5 +216,28 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
             application.activate()
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    private func updatePopoverAnchor() {
+        guard
+            popover.isShown,
+            let button = statusItem?.button,
+            let screenAnchorX = popoverScreenAnchorX,
+            let buttonScreenFrame = screenFrame(for: button)
+        else {
+            return
+        }
+        popover.positioningRect = MenuBarPopoverAnchor.positioningRect(
+            anchoredAt: screenAnchorX,
+            buttonScreenFrame: buttonScreenFrame,
+            buttonBounds: button.bounds
+        )
+    }
+
+    private func screenFrame(for button: NSStatusBarButton) -> NSRect? {
+        guard let window = button.window else {
+            return nil
+        }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
     }
 }

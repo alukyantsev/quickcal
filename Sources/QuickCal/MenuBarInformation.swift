@@ -239,14 +239,7 @@ struct MenuBarInformationPresentation: Equatable {
 
 @MainActor
 enum MenuBarStatusItemRenderer {
-    // Detailed mode is about 136 pt on macOS. The fixed reserve prevents the
-    // status item from being relaid out when the option changes, which keeps
-    // the popover and its icon stationary.
-    static let preferredLength: CGFloat = 152
-
-    static func popoverPositioningRect(in bounds: NSRect) -> NSRect {
-        bounds
-    }
+    static let preferredLength = NSStatusItem.variableLength
 
     static func apply(
         presentation: MenuBarInformationPresentation,
@@ -366,5 +359,22 @@ enum MenuBarStatusItemRenderer {
         )?.withSymbolConfiguration(configuration)
         image?.isTemplate = true
         return image
+    }
+}
+
+@MainActor
+enum MenuBarPopoverAnchor {
+    static func positioningRect(
+        anchoredAt screenX: CGFloat,
+        buttonScreenFrame: NSRect,
+        buttonBounds: NSRect
+    ) -> NSRect {
+        let localMidX = screenX - buttonScreenFrame.minX
+        return NSRect(
+            x: localMidX - 0.5,
+            y: buttonBounds.minY,
+            width: 1,
+            height: buttonBounds.height
+        )
     }
 }

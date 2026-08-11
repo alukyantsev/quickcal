@@ -217,7 +217,7 @@ struct MenuBarStatusItemRendererTests {
     }
 
     @Test
-    func detailedAndFallbackRenderingKeepOneFixedWidthPopoverAction() {
+    func detailedAndFallbackRenderingKeepOneVariableWidthPopoverAction() {
         let button = NSStatusBarButton(frame: NSRect(
             x: 0,
             y: 0,
@@ -235,7 +235,7 @@ struct MenuBarStatusItemRendererTests {
         )
 
         let detailedWidth = button.fittingSize.width
-        #expect(MenuBarStatusItemRenderer.preferredLength > 0)
+        #expect(MenuBarStatusItemRenderer.preferredLength == NSStatusItem.variableLength)
         #expect(button.imagePosition == .imageLeading)
         #expect(button.image?.isTemplate == true)
         #expect(button.attributedTitle.string == "+18° · \u{FFFC}\u{00A0}2740")
@@ -252,20 +252,36 @@ struct MenuBarStatusItemRendererTests {
         #expect(button.imagePosition == .imageOnly)
         #expect(button.image?.isTemplate == true)
         #expect(button.attributedTitle.string.isEmpty)
-        #expect(
-            MenuBarStatusItemRenderer.preferredLength >= detailedWidth
-        )
+        #expect(detailedWidth > button.fittingSize.width)
         #expect(button.target === target)
         #expect(button.action == action)
         #expect(button.accessibilityLabel() == "QuickCal")
     }
 
     @Test
-    func popoverUsesTheButtonBoundsBecauseItsWidthDoesNotChange() {
-        let bounds = NSRect(x: 0, y: 0, width: 152, height: 22)
+    func popoverRectKeepsItsScreenAnchorWhenTheStatusItemChangesWidth() {
+        let anchorScreenX: CGFloat = 500
+        let detailedFrame = NSRect(x: 430, y: 0, width: 136, height: 24)
+        let compactFrame = NSRect(x: 542, y: 0, width: 24, height: 24)
+        let detailedBounds = NSRect(x: 0, y: 0, width: 136, height: 24)
+        let compactBounds = NSRect(x: 0, y: 0, width: 24, height: 24)
+
+        let detailedRect = MenuBarPopoverAnchor.positioningRect(
+            anchoredAt: anchorScreenX,
+            buttonScreenFrame: detailedFrame,
+            buttonBounds: detailedBounds
+        )
+        let compactRect = MenuBarPopoverAnchor.positioningRect(
+            anchoredAt: anchorScreenX,
+            buttonScreenFrame: compactFrame,
+            buttonBounds: compactBounds
+        )
+
         #expect(
-            MenuBarStatusItemRenderer.popoverPositioningRect(in: bounds)
-                == bounds
+            detailedFrame.minX + detailedRect.midX == anchorScreenX
+        )
+        #expect(
+            compactFrame.minX + compactRect.midX == anchorScreenX
         )
     }
 
