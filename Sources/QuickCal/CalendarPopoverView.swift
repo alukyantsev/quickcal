@@ -868,6 +868,12 @@ struct CalendarPopoverView: View {
                 showWeekNumbers.toggle()
             }
 
+            if let menuBarInformationSettings {
+                MenuBarInformationOptionsView(
+                    settings: menuBarInformationSettings
+                )
+            }
+
             popupRow(
                 title: localization.string(.launchAtLogin),
                 systemImage: launchAtLogin.isEnabled
@@ -875,17 +881,6 @@ struct CalendarPopoverView: View {
                     : "square"
             ) {
                 launchAtLogin.setEnabled(!launchAtLogin.isEnabled)
-            }
-
-            if let menuBarInformationSettings {
-                Rectangle()
-                    .fill(popupDividerColor)
-                    .frame(height: 1)
-                    .padding(.vertical, 2)
-
-                MenuBarInformationOptionsView(
-                    settings: menuBarInformationSettings
-                )
             }
 
             if let weatherController {

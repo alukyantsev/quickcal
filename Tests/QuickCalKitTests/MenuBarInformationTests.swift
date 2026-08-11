@@ -61,7 +61,7 @@ struct MenuBarInformationPresentationTests {
         #expect(presentation.quote == MenuBarInformationPresentation.Quote(
             value: "2740"
         ))
-        #expect(presentation.title == "+18° · IMOEX 2740")
+        #expect(presentation.title == "+18° · 2740")
         #expect(presentation.accessibilityLabel == "QuickCal. Weather +18°; current data. IMOEX 2740; current data.")
         #expect(presentation.toolTip == presentation.accessibilityLabel)
     }
@@ -94,7 +94,7 @@ struct MenuBarInformationPresentationTests {
         #expect(presentation.weather?.temperature == "-5°")
         #expect(presentation.weather?.isStale == true)
         #expect(presentation.weather?.staleAt == fetchedAt)
-        #expect(presentation.quote?.text == "IMOEX 2281")
+        #expect(presentation.quote?.text == "2281")
         #expect(presentation.quote?.isStale == true)
         #expect(presentation.quote?.staleAt == fetchedAt)
         #expect(presentation.accessibilityLabel.hasPrefix(
@@ -156,7 +156,7 @@ struct MenuBarInformationPresentationTests {
         #expect(weatherOnly.title == "+7°")
         #expect(weatherOnly.weather != nil)
         #expect(weatherOnly.quote == nil)
-        #expect(quoteOnly.title == "IMOEX 2740")
+        #expect(quoteOnly.title == "2740")
         #expect(quoteOnly.weather == nil)
         #expect(quoteOnly.quote != nil)
         #expect(!none.isDetailed)
@@ -238,7 +238,7 @@ struct MenuBarStatusItemRendererTests {
         #expect(MenuBarStatusItemRenderer.preferredLength == NSStatusItem.variableLength)
         #expect(button.imagePosition == .imageLeading)
         #expect(button.image?.isTemplate == true)
-        #expect(button.attributedTitle.string == "+18° · IMOEX 2740")
+        #expect(button.attributedTitle.string == "+18° · \u{FFFC}2740")
         #expect(button.target === target)
         #expect(button.action == action)
         #expect(button.accessibilityLabel() == detailedPresentation.accessibilityLabel)
@@ -272,18 +272,18 @@ struct MenuBarStatusItemRendererTests {
             to: button
         )
 
-        let freshWeatherColor = try #require(button.attributedTitle.attribute(
+        let freshWeatherColor = button.attributedTitle.attribute(
             .foregroundColor,
             at: 0,
             effectiveRange: nil
-        ) as? NSColor)
-        let freshQuoteColor = try #require(button.attributedTitle.attribute(
+        ) as? NSColor
+        let freshQuoteColor = button.attributedTitle.attribute(
             .foregroundColor,
             at: button.attributedTitle.length - 1,
             effectiveRange: nil
-        ) as? NSColor)
-        #expect(freshWeatherColor == .labelColor)
-        #expect(freshQuoteColor == .labelColor)
+        ) as? NSColor
+        #expect(freshWeatherColor == nil)
+        #expect(freshQuoteColor == nil)
 
         MenuBarStatusItemRenderer.apply(
             presentation: MenuBarInformationPresentation(
@@ -312,9 +312,28 @@ struct MenuBarStatusItemRendererTests {
             at: button.attributedTitle.length - 1,
             effectiveRange: nil
         ) as? NSColor)
-        #expect(button.contentTintColor == .secondaryLabelColor)
+        #expect(button.contentTintColor == nil)
         #expect(staleWeatherColor == .secondaryLabelColor)
         #expect(staleQuoteColor == .secondaryLabelColor)
+    }
+
+    @Test
+    func freshRenderingLetsTheMenuBarChooseTemplateTintAndUsesTheMarketSymbol() {
+        let button = NSStatusBarButton(frame: NSRect(
+            x: 0,
+            y: 0,
+            width: 24,
+            height: NSStatusBar.system.thickness
+        ))
+
+        MenuBarStatusItemRenderer.apply(
+            presentation: detailedPresentation,
+            to: button
+        )
+
+        #expect(button.contentTintColor == nil)
+        #expect(button.attributedTitle.string == "+18° · \u{FFFC}2740")
+        #expect(button.image?.isTemplate == true)
     }
 
     private var detailedPresentation: MenuBarInformationPresentation {

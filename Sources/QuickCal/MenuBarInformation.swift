@@ -23,10 +23,12 @@ struct MenuBarInformationPresentation: Equatable {
     }
 
     struct Quote: Equatable {
+        static let systemImage = "chart.line.uptrend.xyaxis"
+
         let value: String
         let staleAt: Date?
 
-        var text: String { "IMOEX \(value)" }
+        var text: String { value }
         var isStale: Bool { staleAt != nil }
 
         init(value: String, staleAt: Date? = nil) {
@@ -266,9 +268,7 @@ enum MenuBarStatusItemRenderer {
                 pointSize: 14
             )
             button.imagePosition = .imageLeading
-            button.contentTintColor = weather.isStale
-                ? .secondaryLabelColor
-                : .labelColor
+            button.contentTintColor = nil
         } else {
             button.image = nil
             button.imagePosition = .noImage
@@ -285,7 +285,7 @@ enum MenuBarStatusItemRenderer {
         )
         button.imagePosition = .imageOnly
         button.imageScaling = .scaleNone
-        button.contentTintColor = .labelColor
+        button.contentTintColor = nil
     }
 
     private static func attributedTitle(
@@ -295,16 +295,19 @@ enum MenuBarStatusItemRenderer {
         if let weather = presentation.weather {
             result.append(fragment(
                 weather.temperature,
-                color: weather.isStale ? .secondaryLabelColor : .labelColor
+                color: weather.isStale ? .secondaryLabelColor : nil
             ))
         }
         if presentation.weather != nil, presentation.quote != nil {
             result.append(fragment(" · ", color: .secondaryLabelColor))
         }
         if let quote = presentation.quote {
+            result.append(symbolAttachment(
+                named: MenuBarInformationPresentation.Quote.systemImage
+            ))
             result.append(fragment(
                 quote.text,
-                color: quote.isStale ? .secondaryLabelColor : .labelColor
+                color: quote.isStale ? .secondaryLabelColor : nil
             ))
         }
         return result
@@ -312,18 +315,28 @@ enum MenuBarStatusItemRenderer {
 
     private static func fragment(
         _ string: String,
-        color: NSColor
+        color: NSColor?
     ) -> NSAttributedString {
-        NSAttributedString(
+        var attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedDigitSystemFont(
+                ofSize: NSFont.systemFontSize,
+                weight: .medium
+            ),
+        ]
+        if let color {
+            attributes[.foregroundColor] = color
+        }
+        return NSAttributedString(
             string: string,
-            attributes: [
-                .font: NSFont.monospacedDigitSystemFont(
-                    ofSize: NSFont.systemFontSize,
-                    weight: .medium
-                ),
-                .foregroundColor: color,
-            ]
+            attributes: attributes
         )
+    }
+
+    private static func symbolAttachment(named name: String) -> NSAttributedString {
+        let attachment = NSTextAttachment()
+        attachment.image = symbolImage(named: name, pointSize: 12)
+        attachment.bounds = NSRect(x: 0, y: -2, width: 12, height: 12)
+        return NSAttributedString(attachment: attachment)
     }
 
     private static func symbolImage(

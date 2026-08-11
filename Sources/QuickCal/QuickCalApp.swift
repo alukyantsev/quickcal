@@ -137,16 +137,34 @@ final class QuickCalAppDelegate: NSObject, NSApplicationDelegate {
                 quoteController.$settings
             )
             .combineLatest(menuBarInformationSettings.$isEnabled)
-            .sink { [weak self] _ in
-                self?.updateMenuBarPresentation()
+            .sink { [weak self] states, isEnabled in
+                self?.updateMenuBarPresentation(
+                    isEnabled: isEnabled,
+                    weatherIsVisible: states.1.isVisible,
+                    weatherState: states.0,
+                    quoteIsVisible: states.3.isVisible,
+                    quoteState: states.2
+                )
             }
             .store(in: &menuBarCancellables)
     }
 
-    private func updateMenuBarPresentation() {
+    private func updateMenuBarPresentation(
+        isEnabled: Bool,
+        weatherIsVisible: Bool,
+        weatherState: WeatherPresentationState,
+        quoteIsVisible: Bool,
+        quoteState: QuotePresentationState
+    ) {
         guard let button = statusItem?.button else { return }
         MenuBarStatusItemRenderer.apply(
-            presentation: currentMenuBarPresentation,
+            presentation: MenuBarInformationPresentation.make(
+                isEnabled: isEnabled,
+                weatherIsVisible: weatherIsVisible,
+                weatherState: weatherState,
+                quoteIsVisible: quoteIsVisible,
+                quoteState: quoteState
+            ),
             to: button
         )
     }
