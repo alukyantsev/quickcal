@@ -1,6 +1,43 @@
 import SwiftUI
 import QuickCalKit
 
+enum SprintCalendarLayout {
+    static let columnSpacing: CGFloat = 4
+    static let dayCellWidth: CGFloat = 34
+    static let weekNumberColumnWidth: CGFloat = 28
+    static let weekdayGridWidth = dayCellWidth * 7 + columnSpacing * 6
+
+    static func gridWidth(
+        showsWeekNumbers: Bool,
+        sprintColumnWidth: CGFloat
+    ) -> CGFloat {
+        weekdayGridWidth
+            + (showsWeekNumbers ? columnSpacing + weekNumberColumnWidth : 0)
+            + (sprintColumnWidth > 0 ? columnSpacing + sprintColumnWidth : 0)
+    }
+
+    static func columnWidth(month: CalendarMonth, schedule: SprintSchedule) -> CGFloat {
+        let widestLabel = month.weeks.map { week in
+            schedule.sprintNumbers(for: week.days.map(\.date))
+        }
+        .map(labelWidth)
+        .max() ?? 0
+
+        // Keep the 11 pt label unscaled and round to the calendar's 4 pt rhythm.
+        return max(20, (widestLabel / 4).rounded(.up) * 4)
+    }
+
+    private static func labelWidth(for sprintNumbers: [Int]) -> CGFloat {
+        guard !sprintNumbers.isEmpty else { return 8 }
+
+        let digitWidth: CGFloat = 7
+        let separatorWidth: CGFloat = 10 // arrow glyph plus the HStack spacing
+        let digits = sprintNumbers.reduce(0) { $0 + String($1).count }
+        return CGFloat(digits) * digitWidth
+            + CGFloat(sprintNumbers.count - 1) * separatorWidth
+    }
+}
+
 struct CalendarGridView: View {
     let month: CalendarMonth
     let showWeekNumbers: Bool
@@ -14,14 +51,16 @@ struct CalendarGridView: View {
 
     @Environment(\.quickCalThemeStyle) private var themeStyle
 
-    private let cellWidth: CGFloat = 34
+    private let cellWidth = SprintCalendarLayout.dayCellWidth
     private let rowSpacing: CGFloat = 3
-    // Fits a normal two-sprint week ("40 → 41") without scaling its 11 pt label.
-    private let sprintColumnWidth: CGFloat = 40
+    private var sprintColumnWidth: CGFloat {
+        guard let sprintSchedule else { return 0 }
+        return SprintCalendarLayout.columnWidth(month: month, schedule: sprintSchedule)
+    }
 
     var body: some View {
         VStack(spacing: rowSpacing) {
-            HStack(spacing: 4) {
+            HStack(spacing: SprintCalendarLayout.columnSpacing) {
                 ForEach(Array(month.weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol)
                         .font(.system(
@@ -44,7 +83,7 @@ struct CalendarGridView: View {
                                 themeStyle.weekNumberOpacity
                             )
                         )
-                        .frame(width: 28)
+                        .frame(width: SprintCalendarLayout.weekNumberColumnWidth)
                 }
                 if sprintSchedule != nil {
                     Image(systemName: "flag.fill")
@@ -85,7 +124,7 @@ struct CalendarGridView: View {
                 ) ?? []
                 let currentSprint = sprintSchedule?.sprint(for: today)
 
-                HStack(spacing: 4) {
+                HStack(spacing: SprintCalendarLayout.columnSpacing) {
                     ForEach(
                         Array(week.days.enumerated()),
                         id: \.element.id
@@ -133,7 +172,7 @@ struct CalendarGridView: View {
                                     themeStyle.weekNumberOpacity
                                 )
                             )
-                            .frame(width: 28)
+                            .frame(width: SprintCalendarLayout.weekNumberColumnWidth)
                             .accessibilityLabel(
                                 Text(verbatim: localization.format(
                                     .weekNumberFormat,

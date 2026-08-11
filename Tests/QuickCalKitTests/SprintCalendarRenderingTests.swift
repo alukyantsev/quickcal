@@ -9,6 +9,28 @@ import QuickCalKit
 @MainActor
 struct SprintCalendarRenderingTests {
     @Test
+    func sprintColumnUsesOnlyTheWidthRequiredByTheVisibleMonth() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let start = try #require(CalendarDate(year: 2026, month: 7, day: 8))
+        let schedule = try #require(SprintSchedule(
+            startDate: start,
+            firstSprintNumber: 40,
+            timeZone: calendar.timeZone
+        ))
+        let month = try #require(CalendarMonth(
+            containing: date(2026, 7, 20, calendar: calendar),
+            calendar: calendar
+        ))
+
+        #expect(SprintCalendarLayout.columnWidth(month: month, schedule: schedule) == 40)
+        #expect(SprintCalendarLayout.gridWidth(
+            showsWeekNumbers: true,
+            sprintColumnWidth: 40
+        ) == 338)
+    }
+
+    @Test
     func calendarGridRendersSprintColumnAndCurrentSprintHighlight() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
@@ -76,5 +98,9 @@ struct SprintCalendarRenderingTests {
         )
 
         #expect(cell.accessibilityValue == "Sprint 8, Today, Selected, Day off, Current sprint")
+    }
+
+    private func date(_ year: Int, _ month: Int, _ day: Int, calendar: Calendar) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }
 }
