@@ -811,7 +811,7 @@ struct CalendarPopoverView: View {
 
     private var calendarWidth: CGFloat {
         let baseWidth: CGFloat = showWeekNumbers ? 376 : 344
-        return baseWidth + (sprintSettings.settings.isVisible ? 56 : 0)
+        return baseWidth + (sprintSettings.settings.isVisible ? 44 : 0)
     }
 
     private func sprintSchedule(for month: CalendarMonth) -> SprintSchedule? {

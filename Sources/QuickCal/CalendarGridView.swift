@@ -16,8 +16,8 @@ struct CalendarGridView: View {
 
     private let cellWidth: CGFloat = 34
     private let rowSpacing: CGFloat = 3
-    // Wide enough for several sprint numbers; labels align to the leading grid rhythm.
-    private let sprintColumnWidth: CGFloat = 52
+    // Fits a normal two-sprint week ("40 → 41") without scaling its 11 pt label.
+    private let sprintColumnWidth: CGFloat = 40
 
     var body: some View {
         VStack(spacing: rowSpacing) {
