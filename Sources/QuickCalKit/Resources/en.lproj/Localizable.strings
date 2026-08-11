@@ -25,6 +25,7 @@
 "settings.sprint_pause_start" = "Starts";
 "settings.sprint_pause_end" = "Ends";
 "settings.add_sprint_pause" = "Add pause";
+"settings.remove_sprint_pause" = "Remove pause";
 "settings.sprint_history_warning" = "Change past sprint schedule?";
 "settings.sprint_history_warning_message" = "This recalculates all following sprint dates.";
 "settings.sprint_history_confirm" = "Recalculate";

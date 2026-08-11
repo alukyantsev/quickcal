@@ -25,6 +25,7 @@
 "settings.sprint_pause_start" = "Начало";
 "settings.sprint_pause_end" = "Конец";
 "settings.add_sprint_pause" = "Добавить паузу";
+"settings.remove_sprint_pause" = "Удалить паузу";
 "settings.sprint_history_warning" = "Изменить прошедшее расписание?";
 "settings.sprint_history_warning_message" = "Все последующие даты спринтов будут пересчитаны.";
 "settings.sprint_history_confirm" = "Пересчитать";

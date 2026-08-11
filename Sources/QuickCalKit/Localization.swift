@@ -29,6 +29,7 @@ public struct QuickCalLocalization: Sendable {
         case sprintPauseStart = "settings.sprint_pause_start"
         case sprintPauseEnd = "settings.sprint_pause_end"
         case addSprintPause = "settings.add_sprint_pause"
+        case removeSprintPause = "settings.remove_sprint_pause"
         case sprintHistoryWarning = "settings.sprint_history_warning"
         case sprintHistoryWarningMessage = "settings.sprint_history_warning_message"
         case sprintHistoryConfirm = "settings.sprint_history_confirm"

@@ -403,7 +403,6 @@ private struct SprintScheduleOptionsView: View {
     @State private var startDate = Date()
     @State private var firstSprintNumber = 1
     @State private var customLength = 14
-    @State private var menuSprintNumber = 1
     @State private var pauseStartDate = Date()
     @State private var pauseEndDate = Date()
     @State private var pendingLength: Int?
@@ -432,61 +431,20 @@ private struct SprintScheduleOptionsView: View {
                 .padding(.horizontal, 7)
             }
 
-            DatePicker(
-                localization.string(.sprintStartDate),
-                selection: $startDate,
-                displayedComponents: .date
-            )
-            .datePickerStyle(.compact)
-            .font(.system(size: 12))
-            .padding(.horizontal, 7)
+            if store.settings.startDate == nil || store.settings.isVisible {
+                scheduleConfiguration
 
-            HStack(spacing: 6) {
-                Text(verbatim: localization.string(.sprintFirstNumber))
-                    .font(.system(size: 12))
-                TextField(
-                    "",
-                    value: $firstSprintNumber,
-                    format: .number
-                )
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 48)
+                if let editingSprint {
+                    sprintEditor(for: editingSprint)
+                }
+
+                pauseEditor
             }
-            .foregroundStyle(themeStyle.primaryText)
-            .padding(.horizontal, 7)
-
-            HoverTextButton(
-                title: localization.string(.saveSprintSchedule),
-                help: localization.string(.saveSprintSchedule),
-                height: 25,
-                horizontalPadding: 7
-            ) {
-                guard
-                    firstSprintNumber > 0,
-                    let calendarDate = CalendarDate(date: startDate)
-                else { return }
-                store.configure(
-                    startDate: calendarDate,
-                    firstSprintNumber: firstSprintNumber
-                )
-            }
-            .padding(.horizontal, 7)
-
-            if store.settings.startDate != nil {
-                menuSprintEditorLauncher
-            }
-
-            if let editingSprint {
-                sprintEditor(for: editingSprint)
-            }
-
-            pauseEditor
         }
         .onAppear {
             guard let savedStartDate = store.settings.startDate else { return }
             startDate = savedStartDate.date() ?? startDate
             firstSprintNumber = store.settings.firstSprintNumber
-            menuSprintNumber = store.settings.firstSprintNumber
         }
         .confirmationDialog(
             localization.string(.sprintHistoryWarning),
@@ -514,25 +472,44 @@ private struct SprintScheduleOptionsView: View {
         }
     }
 
-    @ViewBuilder
-    private var menuSprintEditorLauncher: some View {
-        HStack(spacing: 6) {
-            Text(verbatim: localization.string(.sprintNumber))
-                .font(.system(size: 12))
-            TextField("", value: $menuSprintNumber, format: .number)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 48)
+    private var scheduleConfiguration: some View {
+        Group {
+            DatePicker(
+                localization.string(.sprintStartDate),
+                selection: $startDate,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.compact)
+            .font(.system(size: 12))
+            .padding(.horizontal, 7)
+
+            HStack(spacing: 6) {
+                Text(verbatim: localization.string(.sprintFirstNumber))
+                    .font(.system(size: 12))
+                TextField("", value: $firstSprintNumber, format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 48)
+            }
+            .foregroundStyle(themeStyle.primaryText)
+            .padding(.horizontal, 7)
+
             HoverTextButton(
-                title: localization.string(.editSprintLength),
-                help: localization.string(.editSprintLength),
+                title: localization.string(.saveSprintSchedule),
+                help: localization.string(.saveSprintSchedule),
                 height: 25,
                 horizontalPadding: 7
             ) {
-                editingSprint = store.settings.schedule?.sprint(number: menuSprintNumber)
+                guard
+                    firstSprintNumber > 0,
+                    let calendarDate = CalendarDate(date: startDate)
+                else { return }
+                store.configure(
+                    startDate: calendarDate,
+                    firstSprintNumber: firstSprintNumber
+                )
             }
+            .padding(.horizontal, 7)
         }
-        .foregroundStyle(themeStyle.primaryText)
-        .padding(.horizontal, 7)
     }
 
     @ViewBuilder
@@ -592,6 +569,24 @@ private struct SprintScheduleOptionsView: View {
                 else { _ = store.addPause(from: start, through: end) }
             }
             .padding(.horizontal, 7)
+
+            ForEach(store.settings.pauses, id: \.startDate) { pause in
+                HStack(spacing: 6) {
+                    Text(verbatim: "\(pause.startDate.year)-\(pause.startDate.month)-\(pause.startDate.day) — \(pause.endDate.year)-\(pause.endDate.month)-\(pause.endDate.day)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(themeStyle.secondaryText)
+                    Spacer(minLength: 0)
+                    HoverIconButton(
+                        title: localization.string(.removeSprintPause),
+                        systemImage: "minus.circle",
+                        symbolSize: 11,
+                        controlSize: 24
+                    ) {
+                        _ = store.removePause(pause)
+                    }
+                }
+                .padding(.horizontal, 7)
+            }
         }
     }
 
@@ -811,7 +806,7 @@ struct CalendarPopoverView: View {
 
     private var calendarWidth: CGFloat {
         let baseWidth: CGFloat = showWeekNumbers ? 376 : 344
-        return baseWidth + (sprintSettings.settings.isVisible ? 36 : 0)
+        return baseWidth + (sprintSettings.settings.isVisible ? 56 : 0)
     }
 
     private func sprintSchedule(for month: CalendarMonth) -> SprintSchedule? {

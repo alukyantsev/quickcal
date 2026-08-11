@@ -162,6 +162,44 @@ struct SprintScheduleTests {
     }
 
     @Test
+    func extendingSprintReclaimsOnlyTheOverlappingPartOfAPause() throws {
+        let fixture = defaultsFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let start = try #require(CalendarDate(year: 2026, month: 7, day: 8))
+        let pauseStart = try #require(CalendarDate(year: 2026, month: 7, day: 18))
+        let pauseEnd = try #require(CalendarDate(year: 2026, month: 7, day: 25))
+        let expectedPauseStart = try #require(CalendarDate(year: 2026, month: 7, day: 22))
+        let store = SprintScheduleSettingsStore(userDefaults: fixture.defaults, key: "sprints.test")
+        store.configure(startDate: start, firstSprintNumber: 8)
+        #expect(store.addPause(from: pauseStart, through: pauseEnd))
+
+        #expect(store.setLength(ofSprint: 8, to: 14))
+        #expect(store.settings.pauses == [
+            .init(startDate: expectedPauseStart, endDate: pauseEnd),
+        ])
+
+        let schedule = try #require(store.settings.schedule)
+        #expect(schedule.sprint(number: 8)?.endDate == CalendarDate(year: 2026, month: 7, day: 21))
+        #expect(schedule.sprint(for: date(2026, 7, 22, calendar: calendar())) == nil)
+    }
+
+    @Test
+    func removingPauseMakesItsDatesPartOfTheSprintAgain() throws {
+        let fixture = defaultsFixture()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let start = try #require(CalendarDate(year: 2026, month: 7, day: 8))
+        let pauseStart = try #require(CalendarDate(year: 2026, month: 7, day: 18))
+        let pauseEnd = try #require(CalendarDate(year: 2026, month: 7, day: 20))
+        let store = SprintScheduleSettingsStore(userDefaults: fixture.defaults, key: "sprints.test")
+        store.configure(startDate: start, firstSprintNumber: 8)
+        #expect(store.addPause(from: pauseStart, through: pauseEnd))
+
+        #expect(store.removePause(.init(startDate: pauseStart, endDate: pauseEnd)))
+        #expect(store.settings.pauses.isEmpty)
+        #expect(try #require(store.settings.schedule).sprint(for: date(2026, 7, 18, calendar: calendar()))?.number == 8)
+    }
+
+    @Test
     func versionOnePayloadMigratesWithoutDiscardingConfiguredSchedule() throws {
         let fixture = defaultsFixture()
         defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }

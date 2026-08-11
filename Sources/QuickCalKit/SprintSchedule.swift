@@ -310,12 +310,33 @@ public final class SprintScheduleSettingsStore: ObservableObject {
         if lengthInDays != settings.defaultLengthInDays {
             overrides.append(.init(sprintNumber: sprintNumber, lengthInDays: lengthInDays))
         }
+
+        guard let startDate = settings.startDate,
+              let schedule = SprintSchedule(
+            startDate: startDate,
+            firstSprintNumber: settings.firstSprintNumber,
+            defaultLengthInDays: settings.defaultLengthInDays,
+            lengthOverrides: overrides,
+            pauses: settings.pauses
+        ), let sprint = schedule.sprint(number: sprintNumber),
+              let nominalEnd = calendarDate(
+                after: sprint.startDate,
+                days: lengthInDays - 1
+              )
+        else { return false }
+
+        let pauses = settings.pauses.flatMap {
+            correctedPause($0, outside: sprint.startDate...nominalEnd)
+        }
         guard areValidSprintRules(
             firstSprintNumber: settings.firstSprintNumber,
             lengthOverrides: overrides,
-            pauses: settings.pauses
+            pauses: pauses
         ) else { return false }
-        replaceSettings(lengthOverrides: overrides.sorted { $0.sprintNumber < $1.sprintNumber })
+        replaceSettings(
+            lengthOverrides: overrides.sorted { $0.sprintNumber < $1.sprintNumber },
+            pauses: pauses
+        )
         return true
     }
 
@@ -329,6 +350,43 @@ public final class SprintScheduleSettingsStore: ObservableObject {
         ) else { return false }
         replaceSettings(pauses: pauses.sorted { $0.startDate < $1.startDate })
         return true
+    }
+
+    @discardableResult
+    public func removePause(_ pause: SprintPause) -> Bool {
+        let pauses = settings.pauses.filter { $0 != pause }
+        guard pauses.count != settings.pauses.count else { return false }
+        replaceSettings(pauses: pauses)
+        return true
+    }
+
+    private func correctedPause(
+        _ pause: SprintPause,
+        outside coveredDates: ClosedRange<CalendarDate>
+    ) -> [SprintPause] {
+        guard pause.startDate <= coveredDates.upperBound,
+              pause.endDate >= coveredDates.lowerBound
+        else { return [pause] }
+
+        var corrected: [SprintPause] = []
+        if pause.startDate < coveredDates.lowerBound,
+           let endDate = calendarDate(after: coveredDates.lowerBound, days: -1) {
+            corrected.append(.init(startDate: pause.startDate, endDate: endDate))
+        }
+        if pause.endDate > coveredDates.upperBound,
+           let startDate = calendarDate(after: coveredDates.upperBound, days: 1) {
+            corrected.append(.init(startDate: startDate, endDate: pause.endDate))
+        }
+        return corrected
+    }
+
+    private func calendarDate(after date: CalendarDate, days: Int) -> CalendarDate? {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        guard let source = date.date(),
+              let result = calendar.date(byAdding: .day, value: days, to: source)
+        else { return nil }
+        return CalendarDate(date: result)
     }
 
     private func replaceSettings(

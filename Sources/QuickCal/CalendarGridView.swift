@@ -16,6 +16,7 @@ struct CalendarGridView: View {
 
     private let cellWidth: CGFloat = 34
     private let rowSpacing: CGFloat = 3
+    private let sprintColumnWidth: CGFloat = 52
 
     var body: some View {
         VStack(spacing: rowSpacing) {
@@ -52,7 +53,7 @@ struct CalendarGridView: View {
                                 themeStyle.weekNumberOpacity
                             )
                         )
-                        .frame(width: 32)
+                        .frame(width: sprintColumnWidth)
                         .accessibilityLabel(
                             Text(verbatim: localization.string(.sprintColumn))
                         )
@@ -180,7 +181,7 @@ struct CalendarGridView: View {
         Group {
             if sprintNumbers.isEmpty {
                 Text(verbatim: "—")
-                    .frame(width: 32)
+                    .frame(width: sprintColumnWidth)
                     .accessibilityLabel(Text(verbatim: localization.string(.noSprint)))
             } else {
                 HStack(spacing: 1) {
@@ -198,9 +199,8 @@ struct CalendarGridView: View {
                         .accessibilityLabel(Text(verbatim: localization.format(.sprintNumberFormat, number)))
                     }
                 }
-                .frame(width: 32)
+                .frame(width: sprintColumnWidth)
                 .lineLimit(1)
-                .minimumScaleFactor(0.65)
                 .accessibilityLabel(Text(verbatim: sprintAccessibilityLabel(
                     sprintNumbers,
                     localization: localization
